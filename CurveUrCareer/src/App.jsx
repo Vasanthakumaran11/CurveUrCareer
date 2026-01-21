@@ -1,22 +1,37 @@
-import React from "react";
+import React from 'react';
+import Hero from './components/Hero';
+import StreamsOverview from './components/StreamsOverview';
+import HowItWorks from './components/HowItWorks';
+import Features from './components/Features';
+import Footer from './components/Footer';
 
 function App() {
   return (
-    <div className="max-h-screen bg-gradient-to-r from-blue-100 to-white flex items-center justify-center">
-      <div className="max-w-xl w-full p-6 bg-white rounded-2xl shadow-lg">
-        <h1 className="text-3xl font-bold text-center text-blue-700 mb-4">
-          Welcome to CurveUrCareer
-        </h1>
-        <p className="text-gray-600 text-center">
-          This is your starter React + Tailwind project.
-        </p>
+    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
+      {/* Header/Navigation */}
+      <header className="sticky top-0 bg-white shadow-md z-10">
+        <nav className="container mx-auto px-4 py-3 flex justify-between items-center">
+          <div className="flex items-center space-x-2">
+            <div className="w-8 h-8 bg-blue-600 rounded-lg"></div>
+            <h1 className="text-2xl font-bold text-gray-800">CurveUrCareer</h1>
+          </div>
+          <div className="flex space-x-6">
+            <a href="#" className="text-blue-600 font-medium border-b-2 border-blue-600">Home</a>
+            <a href="#" className="text-gray-600 hover:text-blue-600">Streams</a>
+            <a href="#" className="text-gray-600 hover:text-blue-600">Courses</a>
+            <a href="#" className="text-gray-600 hover:text-blue-600">About</a>
+          </div>
+        </nav>
+      </header>
 
-        <div className="mt-6 flex justify-center">
-          <button className="px-6 py-2 rounded-full bg-blue-600 text-white font-semibold hover:bg-blue-700 transition">
-            Get Started
-          </button>
-        </div>
-      </div>
+      <main>
+        <Hero />
+        <Features />
+        <StreamsOverview />
+        <HowItWorks />
+      </main>
+
+      <Footer />
     </div>
   );
 }
