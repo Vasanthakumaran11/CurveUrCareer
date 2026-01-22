@@ -1,8 +1,9 @@
 import React from 'react';
 import Hero from './components/Hero';
+import Features from './components/Features';
+import TrendingCourses from './components/TrendingCourses';
 import StreamsOverview from './components/StreamsOverview';
 import HowItWorks from './components/HowItWorks';
-import Features from './components/Features';
 import Footer from './components/Footer';
 
 function App() {
@@ -27,6 +28,7 @@ function App() {
       <main>
         <Hero />
         <Features />
+        <TrendingCourses />
         <StreamsOverview />
         <HowItWorks />
       </main>
