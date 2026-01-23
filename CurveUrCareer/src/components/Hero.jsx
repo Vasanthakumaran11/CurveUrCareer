@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 
 const Hero = () => {
   return (
@@ -14,10 +15,12 @@ const Hero = () => {
           Don't worry! We'll help you discover the right stream, choose the best course, 
           and understand your career options — all in simple language.
         </p>
-        {/* Button added back to original position */}
-        <button className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-8 rounded-lg text-lg shadow-lg transition duration-300 transform hover:scale-105">
-          Start Your Career Discovery →
-        </button>
+        {/* Updated Button - Now a Link to Career Guidance */}
+        <Link to="/career-guidance">
+          <button style={{cursor:"pointer"}}className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-8 rounded-lg text-lg shadow-lg transition duration-300 transform hover:scale-105">
+            Start Your Career Discovery →
+          </button>
+        </Link>
       </div>
     </section>
   );
