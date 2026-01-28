@@ -1,10 +1,6 @@
 import React, { useState } from 'react';
 import { FaArrowLeft, FaArrowRight } from 'react-icons/fa';
 
-// Import images if they exist, otherwise use placeholder URLs
-// If you have local images, place them in src/assets/ and import them
-import AiImage from '../assets/AI.jpg'; // Make sure this file exists in src/assets/
-
 const TrendingCourses = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
 
@@ -14,7 +10,7 @@ const TrendingCourses = () => {
       title: "Computer Science Engineering",
       stream: "Science",
       duration: "4 Years",
-      image: AiImage, // Use imported image
+      image: "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=800&auto=format&fit=crop&q=80",
       color: "bg-blue-100",
       textColor: "text-blue-800",
       rating: 4.8,
@@ -25,7 +21,7 @@ const TrendingCourses = () => {
       title: "Bachelor of Commerce (B.Com)",
       stream: "Commerce",
       duration: "3 Years",
-      image: "https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=800&auto=format&fit=crop",
+      image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&auto=format&fit=crop&q=80",
       color: "bg-green-100",
       textColor: "text-green-800",
       rating: 4.6,
@@ -36,7 +32,7 @@ const TrendingCourses = () => {
       title: "Bachelor of Arts (Psychology)",
       stream: "Arts",
       duration: "3 Years",
-      image: "https://images.unsplash.com/photo-1559757175-0eb30cd8c063?w=800&auto=format&fit=crop",
+      image: "https://images.unsplash.com/photo-1516302752625-fcc3c50ae61f?w=800&auto=format&fit=crop&q=80",
       color: "bg-purple-100",
       textColor: "text-purple-800",
       rating: 4.7,
@@ -47,7 +43,7 @@ const TrendingCourses = () => {
       title: "Bachelor of Science (B.Sc)",
       stream: "Science",
       duration: "3 Years",
-      image: "https://images.unsplash.com/photo-1532094349884-543bc11b234d?w=800&auto=format&fit=crop",
+      image: "https://images.unsplash.com/photo-1532094349884-543bc11b234d?w=800&auto=format&fit=crop&q=80",
       color: "bg-blue-100",
       textColor: "text-blue-800",
       rating: 4.5,
@@ -58,7 +54,7 @@ const TrendingCourses = () => {
       title: "Chartered Accountancy (CA)",
       stream: "Commerce",
       duration: "4-5 Years",
-      image: "https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=800&auto=format&fit=crop",
+      image: "https://images.unsplash.com/photo-1554224154-26032ffc0d07?w=800&auto=format&fit=crop&q=80",
       color: "bg-green-100",
       textColor: "text-green-800",
       rating: 4.9,
@@ -69,26 +65,13 @@ const TrendingCourses = () => {
       title: "Bachelor of Design (B.Des)",
       stream: "Arts",
       duration: "4 Years",
-      image: "https://images.unsplash.com/photo-1545235617-9465d2a55698?w=800&auto=format&fit=crop",
+      image: "https://images.unsplash.com/photo-1561070791-2526d30994b5?w=800&auto=format&fit=crop&q=80",
       color: "bg-purple-100",
       textColor: "text-purple-800",
       rating: 4.7,
       students: "25K+ Students"
     }
   ];
-
-  // Fallback image URL in case imported image doesn't exist
-  const getImageSrc = (image) => {
-    if (typeof image === 'string') {
-      return image;
-    } else if (image && image.default) {
-      return image.default;
-    } else if (image) {
-      return image;
-    }
-    // Fallback image if no image is provided
-    return "https://images.unsplash.com/photo-1517077304055-6e89abbf09b0?w=800&auto=format&fit=crop";
-  };
 
   const nextSlide = () => {
     setCurrentIndex((prevIndex) => 
@@ -145,14 +128,14 @@ const TrendingCourses = () => {
             <div key={course.id} className="w-full md:w-1/3 flex-shrink-0 px-3">
               <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden hover:shadow-xl transition duration-300 group">
                 {/* Course Image */}
-                <div className="relative h-48 overflow-hidden">
+                <div className="relative h-48 overflow-hidden bg-gray-100">
                   <img 
-                    src={getImageSrc(course.image)} 
+                    src={course.image} 
                     alt={course.title}
                     className="w-full h-full object-cover group-hover:scale-110 transition duration-500"
                     onError={(e) => {
                       e.target.onerror = null;
-                      e.target.src = "https://images.unsplash.com/photo-1517077304055-6e89abbf09b0?w=800&auto=format&fit=crop";
+                      e.target.src = "https://images.unsplash.com/photo-1517077304055-6e89abbf09b0?w=800&auto=format&fit=crop&q=80";
                     }}
                   />
                   <div className="absolute top-3 left-3">
