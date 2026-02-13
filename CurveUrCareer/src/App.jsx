@@ -27,21 +27,32 @@ const InitialRedirect = () => {
   return null;
 };
 
+const MainContent = () => {
+  const location = useLocation();
+  
+  // Hide Navbar on assessment page for total immersion across all steps
+  const hideNavbar = location.pathname === '/assessment';
+
+  return (
+    <div className="min-h-screen flex flex-col bg-[#f8faff]">
+      {!hideNavbar && <Navbar />}
+      <div className="flex-1">
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/assessment" element={<AssessmentPage />} />
+          <Route path="/results" element={<ResultsPage />} />
+        </Routes>
+      </div>
+    </div>
+  );
+};
+
 function App() {
   return (
     <FormDataProvider>
       <Router>
         <InitialRedirect />
-        <div className="min-h-screen flex flex-col bg-[#f8faff]">
-          <Navbar />
-          <div className="flex-1">
-            <Routes>
-              <Route path="/" element={<HomePage />} />
-              <Route path="/assessment" element={<AssessmentPage />} />
-              <Route path="/results" element={<ResultsPage />} />
-            </Routes>
-          </div>
-        </div>
+        <MainContent />
       </Router>
     </FormDataProvider>
   );

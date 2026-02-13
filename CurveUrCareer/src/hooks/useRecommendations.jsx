@@ -21,18 +21,36 @@ export const useRecommendations = (formData) => {
     }
 
     try {
-      // Generate course recommendations
+      // Generate initial course recommendations
       const allRecommendations = generateRecommendations(coursesData, formData);
-
-      // Get top 5 recommendations
-      const top = getTopRecommendations(allRecommendations, 5);
-
-      // Get alternative recommendations
-      const alternatives = getAlternativeRecommendations(allRecommendations);
 
       // Calculate interest and skills profiles
       const intProfile = calculateInterestProfile(formData.interests);
-      const sklProfile = calculateSkillsProfile(formData.skills);
+      
+      // Use interactive assessment profile if available, else fall back to basic slider data
+      const sklProfile = formData.assessmentResults?.isCompleted 
+        ? formData.assessmentResults.skillProfile 
+        : calculateSkillsProfile(formData.skills);
+
+      // Refine recommendations if interactive assessment is done
+      let refinedRecommendations = allRecommendations;
+      if (formData.assessmentResults?.isCompleted) {
+        // Boost courses that match the top career cluster from the assessment
+        const topCluster = formData.assessmentResults.careerMatches[0];
+        refinedRecommendations = allRecommendations.map(rec => {
+          // Check if course skills align with the core dimension of the top cluster
+          const isClusterMatch = topCluster.core.some(dim => 
+            rec.course.skills?.some(s => s.toLowerCase().includes(dim.toLowerCase().replace('skills', '').replace('thinking', '')))
+          );
+          return isClusterMatch ? { ...rec, matchPercentage: Math.min(100, rec.matchPercentage + 8) } : rec;
+        }).sort((a, b) => b.matchPercentage - a.matchPercentage);
+      }
+
+      // Get top 5 recommendations from refined list
+      const top = getTopRecommendations(refinedRecommendations, 5);
+      
+      // Get alternative recommendations
+      const alternatives = getAlternativeRecommendations(refinedRecommendations);
 
       // Generate college recommendations based on top courses and constraints
       let categorizedColleges = { dream: [], realistic: [], safe: [] };
@@ -53,10 +71,10 @@ export const useRecommendations = (formData) => {
       }
 
       // Generate analysis summary
-      const summary = generateAnalysisSummary(formData, allRecommendations);
+      const summary = generateAnalysisSummary(formData, refinedRecommendations);
 
       return {
-        recommendations: allRecommendations,
+        recommendations: refinedRecommendations,
         topRecommendations: top,
         alternativeRecommendations: alternatives,
         collegeRecommendations: categorizedColleges,
@@ -116,26 +134,6 @@ export const useRecommendations = (formData) => {
     return null;
   };
 
-  // Get recommendations by priority
-  const getRecommendationsByPriority = (priority) => {
-    return recommendations.filter(r => r.priority === priority);
-  };
-
-  // Get recommendations by stream
-  const getRecommendationsByStream = (stream) => {
-    return recommendations.filter(r => r.course.stream === stream);
-  };
-
-  // Search recommendations by keyword
-  const searchRecommendations = (keyword) => {
-    const lowerKeyword = keyword.toLowerCase();
-    return recommendations.filter(r =>
-      r.course.name.toLowerCase().includes(lowerKeyword) ||
-      r.course.description.toLowerCase().includes(lowerKeyword) ||
-      r.course.careerPaths.some(path => path.toLowerCase().includes(lowerKeyword))
-    );
-  };
-
   return {
     recommendations,
     topRecommendations,
@@ -146,10 +144,7 @@ export const useRecommendations = (formData) => {
     analysisSummary,
     loading,
     error,
-    getCareerPathForCourse,
-    getRecommendationsByPriority,
-    getRecommendationsByStream,
-    searchRecommendations
+    getCareerPathForCourse
   };
 };
 

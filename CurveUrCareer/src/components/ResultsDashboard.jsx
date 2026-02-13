@@ -4,7 +4,7 @@ import { useFormData } from '../hooks/useFormData.jsx';
 import { useRecommendations } from '../hooks/useRecommendations.jsx';
 import RecommendationCard from './RecommendationCard';
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
-import { Download, TrendingUp, Award, Building2, Map } from 'lucide-react';
+import { Download, TrendingUp, Award, Building2, Map, Brain } from 'lucide-react';
 import { downloadPDFReport } from '../utils/pdfGenerator';
 import PathwayVisualizer from './PathwayVisualizer';
 
@@ -47,10 +47,15 @@ const ResultsDashboard = () => {
     value
   })) : [];
 
-  const skillsChartData = skillsProfile ? Object.entries(skillsProfile).map(([key, value]) => ({
-    skill: key.charAt(0).toUpperCase() + key.slice(1),
-    level: value
-  })) : [];
+  const skillsChartData = formData.assessmentResults?.isCompleted 
+    ? Object.entries(formData.assessmentResults.skillProfile).map(([key, value]) => ({
+        skill: key.replace(/([A-Z])/g, ' $1').trim().replace(/^\w/, c => c.toUpperCase()),
+        level: value
+      }))
+    : (skillsProfile ? Object.entries(skillsProfile).map(([key, value]) => ({
+        skill: key.charAt(0).toUpperCase() + key.slice(1),
+        level: value
+      })) : []);
 
   const handleDownloadReport = () => {
     downloadPDFReport(formData, topRecommendations, analysisSummary);
@@ -157,6 +162,51 @@ const ResultsDashboard = () => {
               </div>
             )}
           </div>
+
+          {/* New Assessment Insights */}
+          {formData.assessmentResults?.isCompleted && (
+            <div className="glass-card rounded-xl p-8 bg-gradient-to-r from-indigo-50 to-blue-50 border-indigo-100">
+              <h3 className="text-2xl font-bold text-indigo-900 mb-6 flex items-center gap-2">
+                <Brain className="w-8 h-8" /> Specialized Skill Analysis
+              </h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div>
+                  <h4 className="font-bold text-indigo-800 mb-4 uppercase tracking-wider text-sm">Cognitive Power Profile</h4>
+                  <div className="space-y-3">
+                    {Object.entries(formData.assessmentResults.skillProfile)
+                      .sort(([, a], [, b]) => b - a)
+                      .slice(0, 5)
+                      .map(([skill, val]) => (
+                        <div key={skill} className="flex items-center gap-3 bg-white p-3 rounded-xl shadow-sm border border-indigo-100 transition-all hover:scale-105">
+                          <div className="w-10 h-10 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-xs ring-4 ring-indigo-50">
+                            {val}%
+                          </div>
+                          <span className="font-semibold text-indigo-900 text-sm">
+                            {skill.replace(/([A-Z])/g, ' $1').trim().replace(/^\w/, c => c.toUpperCase())}
+                          </span>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+
+                <div>
+                  <h4 className="font-bold text-blue-800 mb-4 uppercase tracking-wider text-sm">Prime Career Pathways</h4>
+                  <div className="space-y-4">
+                    {formData.assessmentResults.careerMatches.slice(0, 3).map((cluster) => (
+                      <div key={cluster.id} className="bg-white p-5 rounded-2xl shadow-sm border border-blue-100 hover:border-blue-300 transition-all">
+                        <div className="flex justify-between items-center mb-2">
+                          <span className="font-black text-blue-900 uppercase tracking-tight">{cluster.name}</span>
+                          <span className="text-xs font-black bg-emerald-100 text-emerald-700 px-3 py-1 rounded-lg">{cluster.matchScore}% FIT</span>
+                        </div>
+                        <p className="text-sm text-blue-600 leading-relaxed font-medium">{cluster.description}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Top Recommendation */}
           {topRecommendations.length > 0 && (

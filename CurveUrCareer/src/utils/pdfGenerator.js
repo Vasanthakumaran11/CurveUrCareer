@@ -137,6 +137,43 @@ export const generatePDFReport = (formData, recommendations) => {
     yPosition += 5;
   }
 
+  // Specialized Skill Analysis Section (Interactive Assessment)
+  if (formData.assessmentResults?.isCompleted) {
+    doc.addPage();
+    yPosition = 20;
+
+    yPosition = addText('Specialized Skill Analysis (Immersive Evaluation)', margin, yPosition, contentWidth, 16, true);
+    yPosition += 5;
+    doc.line(margin, yPosition, pageWidth - margin, yPosition);
+    yPosition += 10;
+
+    // Top Strengths
+    yPosition = addText('Key Cognitive Power Profile:', margin, yPosition, contentWidth, 12, true);
+    yPosition += 5;
+    
+    const strengths = Object.entries(formData.assessmentResults.skillProfile)
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 5);
+
+    strengths.forEach(([skill, val]) => {
+      const label = skill.replace(/([A-Z])/g, ' $1').trim().replace(/^\w/, c => c.toUpperCase());
+      yPosition = addText(`• ${label}: ${val}% - Specialized processing detected.`, margin + 5, yPosition, contentWidth - 10, 10);
+      yPosition += 2;
+    });
+
+    yPosition += 10;
+
+    // Matched Career Clusters
+    yPosition = addText('Premium Career Pathway Fit:', margin, yPosition, contentWidth, 12, true);
+    yPosition += 5;
+
+    formData.assessmentResults.careerMatches.slice(0, 3).forEach(cluster => {
+      yPosition = addText(`${cluster.name} (${cluster.matchScore}% Compatibility)`, margin + 5, yPosition, contentWidth - 10, 10, true);
+      yPosition = addText(cluster.description, margin + 5, yPosition, contentWidth - 10, 9);
+      yPosition += 5;
+    });
+  }
+
   // Career Path Section
   if (topRecs.length > 0 && topRecs[0].course.careerPaths) {
     if (yPosition > 240) {

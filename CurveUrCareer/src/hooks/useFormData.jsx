@@ -35,6 +35,18 @@ export const FormDataProvider = ({ children }) => {
       familyFinancialRange: '',
       collegePreference: '',
       locationPreference: ''
+    },
+    assessmentResults: {
+      responses: [],
+      skillProfile: {},
+      careerMatches: [],
+      isCompleted: false
+    },
+    selfAssessment: {
+      leadership: 50,
+      creativity: 50,
+      moneyManagement: 50,
+      entrepreneurialDrive: 50
     }
   });
 
@@ -75,6 +87,18 @@ export const FormDataProvider = ({ children }) => {
         familyFinancialRange: '',
         collegePreference: '',
         locationPreference: ''
+      },
+      selfAssessment: {
+        leadership: 50,
+        creativity: 50,
+        moneyManagement: 50,
+        entrepreneurialDrive: 50
+      },
+      assessmentResults: {
+        responses: [],
+        skillProfile: {},
+        careerMatches: [],
+        isCompleted: false
       }
     });
     setCurrentStep(0);
@@ -82,7 +106,7 @@ export const FormDataProvider = ({ children }) => {
 
   // Navigate to next step
   const nextStep = () => {
-    setCurrentStep(prev => Math.min(prev + 1, 5));
+    setCurrentStep(prev => Math.min(prev + 1, 3));
   };
 
   // Navigate to previous step
@@ -123,5 +147,3 @@ export const useFormData = () => {
   
   return context;
 };
-
-export default useFormData;
