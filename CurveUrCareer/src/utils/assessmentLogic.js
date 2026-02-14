@@ -2,7 +2,7 @@ import { ASSESSMENT_ITEMS, SKILL_DIMENSIONS } from '../data/assessmentData';
 
 /**
  * Calculates raw scores for each dimension based on user responses
- * @param {Array} responses - List of objects { itemId, value,? choiceId }
+ * @param {Array} responses - List of objects { itemId, ...data }
  */
 export const calculateRawScores = (responses) => {
   const scores = {};
@@ -16,29 +16,62 @@ export const calculateRawScores = (responses) => {
     const item = ASSESSMENT_ITEMS.find(i => i.id === resp.itemId);
     if (!item) return;
 
-    if (item.type === 'scenario-sim' || item.type === 'social-sim') {
-      const choice = item.options.find(o => o.id === resp.choiceId);
+    // Phase 1: Branching Scenario / Phase 5: AI Chat
+    if (item.type === 'branching-scenario' || item.type === 'ai-chat') {
+      const choice = item.options.find(o => o.id === resp.choiceId || o.id === resp.value);
       if (choice && choice.dimensions) {
         Object.keys(choice.dimensions).forEach(dim => {
-          scores[dim] += choice.dimensions[dim];
+          scores[dim] = (scores[dim] || 0) + choice.dimensions[dim];
         });
       }
-    } else if (item.correctAnswer || item.correctSequence) {
-      // Binary scoring for correct/incorrect
-      const isCorrect = item.type === 'sequence-order' || item.type === 'drag-drop-build'
-        ? JSON.stringify(resp.value) === JSON.stringify(item.correctSequence)
-        : resp.value === item.correctAnswer;
+    } 
+    // Phase 2: Creator's Lab (Drag & Drop)
+    else if (item.type === 'drag-drop-challenge') {
+      if (resp.selectedItems && item.dimensions) {
+        const productivityCount = resp.selectedItems.filter(id => 
+          item.items.find(i => i.id === id)?.tags.includes('productivity')
+        ).length;
+        
+        Object.keys(item.dimensions).forEach(dim => {
+          scores[dim] = (scores[dim] || 0) + (item.dimensions[dim] * (productivityCount / 2));
+        });
+      }
+    }
+    // Phase 3: Pattern Detective
+    else if (item.type === 'data-infographic') {
+      if (resp.answers) {
+        let correctCount = 0;
+        item.questions.forEach((q, idx) => {
+          if (resp.answers[idx] === q.answer) correctCount++;
+        });
+        
+        if (item.dimensions) {
+          Object.keys(item.dimensions).forEach(dim => {
+            scores[dim] = (scores[dim] || 0) + (item.dimensions[dim] * (correctCount / item.questions.length));
+          });
+        }
+      }
+    }
+    // Phase 4: Quick Fire (Swipe Deck)
+    else if (item.type === 'swipe-deck') {
+      if (resp.swipes && item.dimensions) {
+        // Calculate patterns in swipes
+        const empatheticCount = resp.swipes.filter(s => ['right', 'up'].includes(s.direction)).length;
+        const logicalCount = resp.swipes.filter(s => ['left', 'down'].includes(s.direction)).length;
 
-      if (isCorrect && item.dimensions) {
+        scores['empathyEI'] = (scores['empathyEI'] || 0) + (empatheticCount * 2);
+        scores['logicalReasoning'] = (scores['logicalReasoning'] || 0) + (logicalCount * 2);
+        
         Object.keys(item.dimensions).forEach(dim => {
-          scores[dim] += item.dimensions[dim];
+          scores[dim] = (scores[dim] || 0) + item.dimensions[dim];
         });
       }
-    } else if (item.type === 'creative-prompt') {
-      // Basic scoring for presence of content
-      if (resp.value && resp.value.length > 10) {
+    }
+    // Legacy support for basic types if any remain
+    else if (item.correctAnswer && item.dimensions) {
+      if (resp.value === item.correctAnswer) {
         Object.keys(item.dimensions).forEach(dim => {
-          scores[dim] += item.dimensions[dim];
+          scores[dim] = (scores[dim] || 0) + item.dimensions[dim];
         });
       }
     }
@@ -64,8 +97,10 @@ export const normalizeScores = (rawScores) => {
       Object.keys(item.dimensions).forEach(dim => {
         maxPossible[dim] += item.dimensions[dim];
       });
-    } else if (item.options) {
-      // For scenario sims, take the max weight across all choices
+    }
+    
+    // Add weights from options/cards for dynamic types
+    if (item.options) {
       const dimWeights = {};
       item.options.forEach(opt => {
         if (opt.dimensions) {
@@ -78,11 +113,16 @@ export const normalizeScores = (rawScores) => {
         maxPossible[dim] += dimWeights[dim];
       });
     }
+
+    if (item.type === 'swipe-deck') {
+      maxPossible['empathyEI'] += (item.cards?.length || 0) * 2;
+      maxPossible['logicalReasoning'] += (item.cards?.length || 0) * 2;
+    }
   });
 
   SKILL_DIMENSIONS.forEach(dim => {
     const max = maxPossible[dim.id] || 1;
-    normalized[dim.id] = Math.min(100, Math.round((rawScores[dim.id] / max) * 100));
+    normalized[dim.id] = Math.min(100, Math.round(((rawScores[dim.id] || 0) / max) * 100));
   });
 
   return normalized;
@@ -139,3 +179,4 @@ export const getCareerMapping = (normalizedScores) => {
   })
   .sort((a, b) => b.matchScore - a.matchScore);
 };
+
