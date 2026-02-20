@@ -137,9 +137,9 @@ const AssessmentEngine = () => {
   };
 
   return (
-    <div className={`h-screen w-full flex flex-col overflow-hidden bg-gradient-to-br ${themeColors[currentPhase.theme]} relative selection:bg-white/20`}>
+    <div className={`min-h-screen w-full flex flex-col bg-gradient-to-br ${themeColors[currentPhase.theme]} relative selection:bg-white/20 pb-24`}>
       {/* Dynamic Background */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <motion.div 
           animate={{ scale: [1, 1.2, 1], rotate: [0, 45, 0] }}
           transition={{ duration: 20, repeat: Infinity }}
@@ -152,12 +152,12 @@ const AssessmentEngine = () => {
         />
       </div>
 
-      {/* Modern HUD Header */}
-      <header className="px-12 py-8 flex justify-between items-center z-30 relative">
-        <div className="flex items-center gap-8">
+      {/* Modern HUD Header - Sticky */}
+      <header className="sticky top-0 px-6 md:px-12 py-6 flex justify-between items-center z-50 bg-black/20 backdrop-blur-xl border-b border-white/5">
+        <div className="flex items-center gap-6">
            <div className="relative">
               <div className="absolute inset-0 bg-white/20 rounded-2xl blur-lg animate-pulse"></div>
-              <div className="relative w-16 h-16 bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl flex items-center justify-center text-3xl">
+              <div className="relative w-14 h-14 bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl flex items-center justify-center text-2xl shadow-2xl">
                 {currentPhase.icon}
               </div>
            </div>
@@ -166,15 +166,14 @@ const AssessmentEngine = () => {
                  <span className="px-3 py-0.5 rounded-full bg-white/10 text-white/40 font-black text-[10px] uppercase tracking-widest border border-white/5">
                     Quest Level {currentPhaseIndex + 1}
                  </span>
-                 <Zap className="w-4 h-4 text-amber-400 fill-amber-400" />
               </div>
-              <h1 className="text-3xl font-black text-white tracking-tighter uppercase">{currentPhase.title}</h1>
+              <h1 className="text-2xl md:text-3xl font-black text-white tracking-tighter uppercase">{currentPhase.title}</h1>
            </div>
         </div>
 
         <div className="hidden lg:flex flex-col items-end gap-3 min-w-[300px]">
            <div className="flex justify-between w-full text-white/40 font-black text-[10px] uppercase tracking-[0.3em]">
-              <span>OVERALL PROGRESS</span>
+              <span>MISSION PROGRESS</span>
               <span>{Math.round(((currentPhaseIndex + 1) / ASSESSMENT_PHASES.length) * 100)}%</span>
            </div>
            <div className="w-full h-2 bg-white/5 rounded-full overflow-hidden border border-white/5 p-[1px]">
@@ -189,15 +188,16 @@ const AssessmentEngine = () => {
       </header>
 
       {/* Main Quest Area */}
-      <main className="flex-1 overflow-y-auto px-12 py-6 relative z-30 flex items-center justify-center scrollbar-hide">
-        <div className="w-full max-w-6xl">
+      <main className="flex-1 px-6 md:px-12 py-12 relative z-30 flex flex-col items-center">
+        <div className="w-full max-w-5xl">
            <AnimatePresence mode="wait">
               <motion.div
                 key={currentPhase.id}
-                initial={{ opacity: 0, x: 20, filter: 'blur(10px)' }}
-                animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
-                exit={{ opacity: 0, x: -20, filter: 'blur(10px)' }}
+                initial={{ opacity: 0, y: 30, filter: 'blur(10px)' }}
+                animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+                exit={{ opacity: 0, y: -30, filter: 'blur(10px)' }}
                 transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+                className="w-full"
               >
                 {renderPhaseContent()}
               </motion.div>
@@ -205,14 +205,14 @@ const AssessmentEngine = () => {
         </div>
       </main>
 
-      {/* Modern Footer HUD */}
-      <footer className="px-12 py-6 bg-black/40 backdrop-blur-md border-t border-white/5 z-30 flex justify-between items-center text-[10px] font-black uppercase tracking-[0.4em] text-white/20">
+      {/* Modern Footer HUD - Sticky at bottom */}
+      <footer className="fixed bottom-0 w-full px-6 md:px-12 py-4 bg-black/60 backdrop-blur-2xl border-t border-white/10 z-50 flex justify-between items-center text-[10px] font-black uppercase tracking-[0.4em] text-white/20">
         <div className="flex items-center gap-6">
-           <div className="flex items-center gap-2 text-emerald-500/40">
+           <div className="flex items-center gap-2 text-emerald-500/60">
               <ShieldCheck className="w-4 h-4" /> SECURE PSYCHOMETRIC CORE
            </div>
-           <div className="h-4 w-px bg-white/5" />
-           <div className="flex items-center gap-2">
+           <div className="hidden md:block h-4 w-px bg-white/10" />
+           <div className="hidden md:flex items-center gap-2">
               <Star className="w-4 h-4 fill-white/20" /> {achievements.length} BADGES EARNED
            </div>
         </div>
@@ -222,7 +222,7 @@ const AssessmentEngine = () => {
               initial={{ scale: 0, opacity: 0 }} 
               animate={{ scale: 1, opacity: 1 }} 
               key={i} 
-              className="px-3 py-1 bg-white/5 rounded-full border border-white/10 text-white/40"
+              className="px-3 py-1 bg-white/5 rounded-full border border-white/10 text-white/60 font-bold"
              >
                {ach}
              </motion.span>

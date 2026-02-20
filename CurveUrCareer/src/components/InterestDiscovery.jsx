@@ -1,9 +1,17 @@
-// Interest Discovery Component - Redesigned as an interactive pictorial test
-import { useState } from 'react';
+// Interest Discovery Component - Gamified "Career Quest" Edition
+import { useState, useEffect } from 'react';
 import { useFormData } from '../hooks/useFormData.jsx';
 import { INTEREST_PROBE_QUESTIONS } from '../data/assessmentData';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, ChevronRight, CheckCircle2, Zap } from 'lucide-react';
+import { 
+  Sparkles, 
+  Zap, 
+  BrainCircuit, 
+  Trophy, 
+  ArrowRight,
+  Target,
+  Rocket
+} from 'lucide-react';
 
 const InterestDiscovery = () => {
   const { formData, updateFormData, nextStep, prevStep } = useFormData();
@@ -12,23 +20,33 @@ const InterestDiscovery = () => {
   const [isFinishing, setIsFinishing] = useState(false);
   const [showIntro, setShowIntro] = useState(true);
 
+  // Sound effect simulation (visual feedback)
+  const [feedback, setFeedback] = useState(null);
+
   const currentQuestion = INTEREST_PROBE_QUESTIONS[currentIdx];
 
-  const handleChoice = (mapping) => {
-    const newSelections = [...selections, mapping];
-    setSelections(newSelections);
+  const handleChoice = (mapping, optionId) => {
+    // Visual feedback
+    setFeedback(optionId);
+    
+    // Delay to show selection
+    setTimeout(() => {
+      const newSelections = [...selections, mapping];
+      setSelections(newSelections);
+      setFeedback(null);
 
-    if (currentIdx < INTEREST_PROBE_QUESTIONS.length - 1) {
-      setCurrentIdx(currentIdx + 1);
-    } else {
-      processInterests(newSelections);
-    }
+      if (currentIdx < INTEREST_PROBE_QUESTIONS.length - 1) {
+        setCurrentIdx(currentIdx + 1);
+      } else {
+        processInterests(newSelections);
+      }
+    }, 400);
   };
 
   const processInterests = (finalSelections) => {
     setIsFinishing(true);
     
-    // Simple frequency-based mapping to determine top interests
+    // Frequency analysis
     const frequency = finalSelections.reduce((acc, curr) => {
       acc[curr] = (acc[curr] || 0) + 1;
       return acc;
@@ -42,34 +60,39 @@ const InterestDiscovery = () => {
       topInterests: sortedInterests.slice(0, 3)
     });
 
-    // Short delay for visual polish
+    // Celebration delay
     setTimeout(() => {
       nextStep();
-    }, 2000);
+    }, 2500);
   };
 
   if (showIntro) {
     return (
-      <div className="max-w-4xl mx-auto p-4 md:p-12 text-center h-[70vh] flex flex-col items-center justify-center">
+      <div className="max-w-4xl mx-auto p-8 h-[70vh] flex flex-col items-center justify-center text-center">
         <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="space-y-8"
+          initial={{ opacity: 0, scale: 0.9, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          className="bg-white rounded-[3rem] p-12 shadow-2xl border-4 border-blue-100 relative overflow-hidden"
         >
-          <div className="w-24 h-24 bg-blue-100 text-blue-600 rounded-[2rem] flex items-center justify-center mx-auto shadow-xl rotate-3">
-            <Sparkles className="w-12 h-12" />
+          <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400" />
+          
+          <div className="w-24 h-24 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-8 shadow-inner">
+            <Rocket className="w-12 h-12" />
           </div>
-          <div className="space-y-3">
-            <h1 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tight">Interest DNA Discovery</h1>
-            <p className="text-xl text-slate-500 max-w-lg mx-auto font-medium">
-              We'll show you a series of visual scenarios. Choose the one that naturally sparks your curiosity.
-            </p>
-          </div>
+          
+          <h1 className="text-4xl md:text-5xl font-black text-slate-900 mb-6 tracking-tight">
+            Career Avatar Quest
+          </h1>
+          <p className="text-xl text-slate-500 max-w-lg mx-auto mb-10 font-medium leading-relaxed">
+            Forget boring tests! Play through 12 quick scenarios to unlock your unique 
+            <span className="text-blue-600 font-bold"> Professional DNA</span> profile.
+          </p>
+          
           <button
             onClick={() => setShowIntro(false)}
-            className="px-12 py-5 bg-blue-600 text-white rounded-2xl font-black text-xl hover:bg-blue-700 transition-all shadow-xl hover:shadow-blue-200 transform hover:scale-105 flex items-center gap-3 mx-auto"
+            className="group relative px-10 py-5 bg-slate-900 text-white rounded-2xl font-black text-xl hover:bg-blue-600 transition-all shadow-xl hover:shadow-blue-200 hover:-translate-y-1 flex items-center gap-3 mx-auto"
           >
-            START SCAN <Zap className="w-6 h-6 fill-current" />
+            Start The Game <Zap className="w-6 h-6 fill-yellow-400 text-yellow-400 group-hover:animate-pulse" />
           </button>
         </motion.div>
       </div>
@@ -77,7 +100,7 @@ const InterestDiscovery = () => {
   }
 
   return (
-    <div className="max-w-4xl mx-auto p-4 md:p-8 min-h-[600px] flex flex-col justify-center">
+    <div className="max-w-4xl mx-auto py-8 px-4">
       <AnimatePresence mode="wait">
         {!isFinishing ? (
           <motion.div
@@ -85,115 +108,99 @@ const InterestDiscovery = () => {
             initial={{ opacity: 0, x: 50 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -50 }}
-            className="space-y-12"
+            className="space-y-8"
           >
-            {/* Header with Step Counter */}
-            <div className="flex justify-between items-end">
-              <div className="space-y-1">
-                <span className="text-blue-600 font-black text-xs uppercase tracking-[0.3em]">Discovery Phase</span>
-                <h3 className="text-4xl font-black text-slate-900 leading-tight">{currentQuestion.question}</h3>
-              </div>
-              <div className="text-right">
-                <span className="text-slate-300 font-black text-6xl italic leading-none">{currentIdx + 1}</span>
-              </div>
+            {/* Game HUD */}
+            <div className="flex items-center justify-between mb-8 bg-white/80 backdrop-blur-sm p-4 rounded-xl border border-white/20 shadow-sm">
+               <div className="flex items-center gap-3">
+                 <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center text-indigo-700 font-black">
+                   {currentIdx + 1}
+                 </div>
+                 <div className="text-xs font-bold uppercase tracking-widest text-slate-400">
+                   Level {currentIdx + 1} of {INTEREST_PROBE_QUESTIONS.length}
+                 </div>
+               </div>
+               
+               <div className="flex-1 max-w-xs mx-4 h-3 bg-slate-100 rounded-full overflow-hidden">
+                 <motion.div 
+                   className="h-full bg-gradient-to-r from-blue-500 to-purple-500"
+                   initial={{ width: `${(currentIdx / INTEREST_PROBE_QUESTIONS.length) * 100}%` }}
+                   animate={{ width: `${((currentIdx + 1) / INTEREST_PROBE_QUESTIONS.length) * 100}%` }}
+                 />
+               </div>
+               
+               <div className="flex items-center gap-2 px-3 py-1 bg-amber-50 text-amber-600 rounded-full text-xs font-bold border border-amber-100">
+                 <Trophy className="w-3 h-3" /> Streak: {currentIdx * 100} XP
+               </div>
             </div>
 
-            {/* Progress Mini-Bar */}
-            <div className="flex gap-2 h-1.5">
-              {INTEREST_PROBE_QUESTIONS.map((_, idx) => (
-                <div 
-                  key={idx} 
-                  className={`h-full flex-1 rounded-full transition-all duration-700 ${
-                    idx <= currentIdx ? 'bg-blue-600 shadow-[0_0_15px_rgba(37,99,235,0.4)]' : 'bg-slate-100'
-                  }`}
-                />
-              ))}
+            {/* Question Card */}
+            <div className="text-center space-y-4 mb-10">
+              <h2 className="text-3xl md:text-4xl font-black text-slate-800 leading-tight">
+                {currentQuestion.question}
+              </h2>
             </div>
-
-            {/* Visual Image if present */}
-            {currentQuestion.imageUrl && (
-              <motion.div 
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="rounded-[2.5rem] overflow-hidden border-8 border-white shadow-2xl bg-slate-100 relative group"
-              >
-                <img 
-                  src={currentQuestion.imageUrl} 
-                  alt="Interest Scenario" 
-                  className="w-full h-64 md:h-80 object-cover transition-transform group-hover:scale-110 duration-1000"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
-              </motion.div>
-            )}
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            
+            {/* Gaming Inputs */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {currentQuestion.options.map((option, idx) => (
                 <motion.button
                   key={option.id}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: idx * 0.1 }}
-                  whileHover={{ scale: 1.02, y: -5 }}
+                  whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
-                  onClick={() => handleChoice(option.mapping)}
-                  className="p-8 text-left rounded-3xl border-2 border-slate-100 hover:border-blue-600 hover:bg-blue-50/50 transition-all group flex items-start justify-between shadow-sm hover:shadow-xl bg-white"
+                  onClick={() => handleChoice(option.mapping, option.id)}
+                  className={`relative p-6 text-left rounded-3xl border-2 transition-all overflow-hidden flex items-center gap-4 group ${
+                    feedback === option.id 
+                      ? 'border-green-500 bg-green-50 ring-4 ring-green-100' 
+                      : 'border-slate-100 bg-white hover:border-indigo-500 hover:shadow-xl'
+                  }`}
                 >
-                  <div className="space-y-2">
-                    <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center font-black text-slate-300 group-hover:bg-blue-600 group-hover:text-white transition-all">
-                      {String.fromCharCode(65 + idx)}
-                    </div>
-                    <span className="text-xl font-bold text-slate-700 group-hover:text-blue-900 block">
+                  <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-xl font-bold transition-colors ${
+                    feedback === option.id ? 'bg-green-500 text-white' : 'bg-slate-50 text-slate-400 group-hover:bg-indigo-600 group-hover:text-white'
+                  }`}>
+                    {['A', 'B', 'C', 'D'][idx]}
+                  </div>
+                  
+                  <div className="flex-1">
+                    <span className={`text-lg font-bold leading-tight ${feedback === option.id ? 'text-green-800' : 'text-slate-700 group-hover:text-slate-900'}`}>
                       {option.text}
                     </span>
                   </div>
-                  <ChevronRight className="w-6 h-6 text-slate-200 group-hover:text-blue-600 group-hover:translate-x-2 transition-all" />
+
+                  {feedback === option.id && (
+                    <motion.div
+                      layoutId="check"
+                      className="absolute right-4 text-green-600"
+                    >
+                      <Target className="w-6 h-6" />
+                    </motion.div>
+                  )}
                 </motion.button>
               ))}
             </div>
 
-            <div className="flex justify-between items-center">
-              <button
-                onClick={prevStep}
-                className="text-slate-400 font-bold hover:text-slate-600 transition-colors uppercase tracking-widest text-xs flex items-center gap-2"
-              >
-                ← Return to Academic
-              </button>
-              <div className="text-slate-400 font-bold text-xs uppercase tracking-widest">
-                Question {currentIdx + 1} of {INTEREST_PROBE_QUESTIONS.length}
-              </div>
-            </div>
           </motion.div>
         ) : (
           <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
+            initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="text-center space-y-10"
+            className="text-center py-20 bg-white rounded-[3rem] shadow-2xl border border-slate-100 relative overflow-hidden"
           >
-            <div className="relative mx-auto w-32 h-32">
-              <motion.div 
-                animate={{ rotate: 360 }}
-                transition={{ duration: 4, repeat: Infinity, ease: 'linear' }}
-                className="absolute inset-0 rounded-[2.5rem] border-4 border-dashed border-emerald-200"
-              />
-              <div className="absolute inset-0 bg-emerald-500 text-white rounded-[2.5rem] flex items-center justify-center shadow-2xl shadow-emerald-200">
-                <CheckCircle2 className="w-16 h-16" />
-              </div>
-            </div>
-            <div className="space-y-3">
-              <h2 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tight uppercase">Interest DNA Mapped</h2>
-              <p className="text-xl text-slate-500 font-medium max-w-sm mx-auto">
-                We've identified your primary cognitive drivers. Proceeding to Life Goals Blueprint...
-              </p>
-            </div>
-            <div className="flex justify-center gap-3">
-              {[0, 1, 2].map(i => (
-                <motion.div
-                  key={i}
-                  animate={{ scale: [1, 1.5, 1], opacity: [0.3, 1, 0.3] }}
-                  transition={{ duration: 1.5, repeat: Infinity, delay: i * 0.2 }}
-                  className="w-3 h-3 bg-emerald-500 rounded-full"
-                />
-              ))}
+            <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20"></div>
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+              className="w-32 h-32 border-8 border-indigo-500 border-t-transparent rounded-full mx-auto mb-8"
+            />
+            <h2 className="text-4xl font-black text-slate-900 mb-4">Level Up!</h2>
+            <p className="text-xl text-slate-500 font-medium">Generating your career avatar...</p>
+            <div className="mt-8 flex justify-center gap-2">
+              <Sparkles className="w-8 h-8 text-yellow-400 animate-bounce" />
+              <BrainCircuit className="w-8 h-8 text-blue-400 animate-bounce delay-100" />
+              <Zap className="w-8 h-8 text-purple-400 animate-bounce delay-200" />
             </div>
           </motion.div>
         )}

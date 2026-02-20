@@ -108,64 +108,122 @@ export const ASSESSMENT_ITEMS = [
 export const INTEREST_PROBE_QUESTIONS = [
   {
     id: 'probe-1',
-    question: 'You have a free weekend. What are you most likely to do?',
-    imageUrl: 'https://images.unsplash.com/photo-1518173946687-a4c8a07a7e8e?q=80&w=1000&auto=format&fit=crop',
+    question: 'You have a school project to complete. You usually:',
     options: [
-      { id: 'code', text: 'Hack together a new app or tool', mapping: 'Technology' },
-      { id: 'paint', text: 'Binge-watch a docu-series on art history', mapping: 'Creative' },
-      { id: 'help', text: 'Volunteer for a community crisis line', mapping: 'Healthcare' },
-      { id: 'trade', text: 'Analyze the stock market trends', mapping: 'Business' }
+      { id: 'a', text: 'Organize the plan and tasks', mapping: 'Management' },
+      { id: 'b', text: 'Think of creative ideas', mapping: 'Creative' },
+      { id: 'c', text: 'Build or make something', mapping: 'Technical' },
+      { id: 'd', text: 'Research information and facts', mapping: 'Research' }
     ]
   },
   {
     id: 'probe-2',
-    question: 'Which of these workspace objects inspires you?',
+    question: 'On a free afternoon, you prefer to:',
     options: [
-      { id: 'stat', text: 'A multi-monitor setup with code', mapping: 'Technology' },
-      { id: 'sketch', text: 'A messy desk full of prototypes', mapping: 'Creative' },
-      { id: 'chart', text: 'A clean whiteboard with strategy maps', mapping: 'Business' },
-      { id: 'book', text: 'A shelf of psychology & justice books', mapping: 'Law' }
+      { id: 'a', text: 'Learn a new app, coding trick, or experiment', mapping: 'Technical' },
+      { id: 'b', text: 'Draw, design, write, or create something', mapping: 'Creative' },
+      { id: 'c', text: 'Organize an event or help friends plan', mapping: 'Management' },
+      { id: 'd', text: 'Read, explore, or investigate something new', mapping: 'Research' }
     ]
   },
   {
     id: 'probe-3',
-    question: 'If you were to write a book, what would it be about?',
+    question: 'If a friend asks for help, you usually:',
     options: [
-      { id: 'sci', text: 'The Physics of Black Holes', mapping: 'Science' },
-      { id: 'med', text: 'The Future of Public Health', mapping: 'Healthcare' },
-      { id: 'biz', text: 'The Psychology of Global Trade', mapping: 'Business' },
-      { id: 'nov', text: 'A Sci-Fi Novel about AI Ethics', mapping: 'Creative' }
+      { id: 'a', text: 'Solve a problem step-by-step', mapping: 'Analytical' },
+      { id: 'b', text: 'Suggest creative alternatives', mapping: 'Creative' },
+      { id: 'c', text: 'Coordinate or guide them', mapping: 'Social' },
+      { id: 'd', text: 'Look for more information before helping', mapping: 'Research' }
     ]
   },
   {
     id: 'probe-4',
-    question: 'Choose a mission for your career:',
-    imageUrl: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=1000&auto=format&fit=crop',
+    question: 'When working in a group, you prefer to:',
     options: [
-      { id: 'tech', text: 'Build tools that define the next decade', mapping: 'Technology' },
-      { id: 'social', text: 'Solve the most pressing social inequities', mapping: 'Social' },
-      { id: 'market', text: 'Optimize the global financial engine', mapping: 'Business' },
-      { id: 'bio', text: 'Unlock the secrets of human longevity', mapping: 'Science' }
+      { id: 'a', text: 'Handle technical tasks', mapping: 'Technical' },
+      { id: 'b', text: 'Design, decorate, or make things visually appealing', mapping: 'Creative' },
+      { id: 'c', text: 'Lead and organize the group', mapping: 'Management' },
+      { id: 'd', text: 'Research ideas and provide solutions', mapping: 'Research' }
     ]
   },
   {
     id: 'probe-5',
-    question: 'When looking at a beautiful bridge, you wonder:',
+    question: 'You enjoy learning most when it is about:',
     options: [
-      { id: 'how', text: 'How do the physics of these cables work?', mapping: 'Science' },
-      { id: 'who', text: 'What stories do the people crossing it share?', mapping: 'Social' },
-      { id: 'cost', text: 'How was the funding for this project secured?', mapping: 'Business' },
-      { id: 'art', text: 'How does the design complement the skyline?', mapping: 'Creative' }
+      { id: 'a', text: 'How things work or technical skills', mapping: 'Technical' },
+      { id: 'b', text: 'Art, music, design, or creative expression', mapping: 'Creative' },
+      { id: 'c', text: 'How to plan, lead, or manage', mapping: 'Management' },
+      { id: 'd', text: 'Facts, science, or new discoveries', mapping: 'Research' }
     ]
   },
   {
     id: 'probe-6',
-    question: 'Which prize would you rather win?',
+    question: 'When you have a difficult problem at school, you:',
     options: [
-      { id: 'nobel', text: 'Nobel Prize in Science', mapping: 'Science' },
-      { id: 'oscar', text: 'Oscar for Production Design', mapping: 'Creative' },
-      { id: 'turing', text: 'Turing Award for Computing', mapping: 'Technology' },
-      { id: 'peace', text: 'Nobel Peace Prize', mapping: 'Law' }
+      { id: 'a', text: 'Break it into small steps', mapping: 'Analytical' },
+      { id: 'b', text: 'Try out creative solutions', mapping: 'Creative' },
+      { id: 'c', text: 'Ask for input and coordinate with friends', mapping: 'Social' },
+      { id: 'd', text: 'Research ideas before attempting', mapping: 'Research' }
+    ]
+  },
+  {
+    id: 'probe-7',
+    question: 'You imagine your ideal career involves:',
+    options: [
+      { id: 'a', text: 'Creating or building things', mapping: 'Technical' },
+      { id: 'b', text: 'Designing, writing, innovating', mapping: 'Creative' },
+      { id: 'c', text: 'Leading, organizing, managing', mapping: 'Management' },
+      { id: 'd', text: 'Discovering, learning, analyzing', mapping: 'Research' }
+    ]
+  },
+  {
+    id: 'probe-8',
+    question: 'You enjoy challenges that:',
+    options: [
+      { id: 'a', text: 'Test your technical skills', mapping: 'Technical' },
+      { id: 'b', text: 'Allow creative solutions', mapping: 'Creative' },
+      { id: 'c', text: 'Let you organize or guide others', mapping: 'Management' },
+      { id: 'd', text: 'Require investigation or study', mapping: 'Research' }
+    ]
+  },
+  {
+    id: 'probe-9',
+    question: 'During group activities, you feel happiest:',
+    options: [
+      { id: 'a', text: 'Handling gadgets, computers, or experiments', mapping: 'Technical' },
+      { id: 'b', text: 'Decorating, making visuals, or designing', mapping: 'Creative' },
+      { id: 'c', text: 'Assigning roles and managing', mapping: 'Management' },
+      { id: 'd', text: 'Exploring ideas and facts', mapping: 'Research' }
+    ]
+  },
+  {
+    id: 'probe-10',
+    question: 'If a gadget or device breaks, you:',
+    options: [
+      { id: 'a', text: 'Try to fix it yourself', mapping: 'Technical' },
+      { id: 'b', text: 'Think of a new way to use it', mapping: 'Creative' },
+      { id: 'c', text: 'Ask someone to help', mapping: 'Social' },
+      { id: 'd', text: 'Research solutions online', mapping: 'Research' }
+    ]
+  },
+  {
+    id: 'probe-11',
+    question: 'You like solving problems by:',
+    options: [
+      { id: 'a', text: 'Using logic and step-by-step methods', mapping: 'Analytical' },
+      { id: 'b', text: 'Trying new and unusual ideas', mapping: 'Creative' },
+      { id: 'c', text: 'Coordinating people or resources', mapping: 'Management' },
+      { id: 'd', text: 'Collecting data and analyzing', mapping: 'Research' }
+    ]
+  },
+  {
+    id: 'probe-12',
+    question: 'In free time, you usually:',
+    options: [
+      { id: 'a', text: 'Build, experiment, or play with tech', mapping: 'Technical' },
+      { id: 'b', text: 'Draw, write, craft, or create', mapping: 'Creative' },
+      { id: 'c', text: 'Organize activities or help others', mapping: 'Management' },
+      { id: 'd', text: 'Read, explore, or investigate', mapping: 'Research' }
     ]
   }
 ];

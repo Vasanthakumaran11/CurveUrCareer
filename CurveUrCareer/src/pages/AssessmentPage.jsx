@@ -22,7 +22,7 @@ const AssessmentPage = () => {
 
   return (
     <div className={`min-h-screen transition-colors duration-700 ${currentSelection.showMeta ? 'bg-slate-50 py-8' : 'bg-white'}`}>
-      <div className={`${currentSelection.showMeta ? 'max-w-7xl mx-auto' : 'w-full h-screen'}`}>
+      <div className={`${currentSelection.showMeta ? 'max-w-7xl mx-auto px-4 md:px-8' : 'w-full min-h-screen'}`}>
         
         {/* Only show Progress and Header for non-immersive steps */}
         <AnimatePresence>

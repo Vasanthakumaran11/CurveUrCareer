@@ -192,7 +192,7 @@ export const calculateInterestProfile = (interestData) => {
     interestData.topInterests.forEach(interest => {
       const normalized = interest.toLowerCase();
       
-      if (['technology', 'programming', 'innovation'].some(k => normalized.includes(k))) {
+      if (['technology', 'programming', 'innovation', 'technical'].some(k => normalized.includes(k))) {
         profile.technology += 20;
       }
       if (['healthcare', 'helping', 'medical'].some(k => normalized.includes(k))) {
@@ -207,7 +207,7 @@ export const calculateInterestProfile = (interestData) => {
       if (['social', 'teaching'].some(k => normalized.includes(k))) {
         profile.social += 20;
       }
-      if (['science', 'research', 'problem solving'].some(k => normalized.includes(k))) {
+      if (['science', 'research', 'problem solving', 'analytical'].some(k => normalized.includes(k))) {
         profile.analytical += 20;
       }
       if (['law', 'justice', 'judiciary'].some(k => normalized.includes(k))) {

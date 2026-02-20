@@ -72,16 +72,43 @@ export const calculateInterestAlignment = (course, interestData) => {
   let score = 0;
   let maxScore = 0;
 
+  // Keyword mapping for broad interest categories
+  const interestKeywords = {
+    'technical': ['technology', 'technical', 'programming', 'coding', 'innovation', 'system', 'artificial intelligence', 'data'],
+    'creative': ['creative', 'art', 'design', 'visual', 'writing', 'media', 'expression', 'animation'],
+    'management': ['management', 'business', 'finance', 'leadership', 'economics', 'entrepreneurship', 'strategy'],
+    'research': ['research', 'science', 'analysis', 'discovery', 'investigation'],
+    'analytical': ['analytical', 'logical', 'math', 'problem solving', 'numerical', 'statistics', 'science'],
+    'social': ['social', 'healthcare', 'helping', 'teaching', 'public service', 'hospitality', 'communication', 'people']
+  };
+
   // Check if course interests match student interests
   if (course.interests && interestData.topInterests) {
     course.interests.forEach(courseInterest => {
       maxScore += 10;
-      const normalizedInterest = courseInterest.toLowerCase();
-      const hasDirectMatch = interestData.topInterests.some(i => i.toLowerCase().includes(normalizedInterest));
+      const normalizedCourseInterest = courseInterest.toLowerCase();
+      
+      // Check if any of the student's top interests map to this course interest
+      const hasDirectMatch = interestData.topInterests.some(studentInterest => {
+        const normalizedStudentInterest = studentInterest.toLowerCase();
+        
+        // 1. Direct match
+        if (normalizedStudentInterest.includes(normalizedCourseInterest) || normalizedCourseInterest.includes(normalizedStudentInterest)) {
+          return true;
+        }
+
+        // 2. Keyword/Synonym match
+        const relatedKeywords = interestKeywords[normalizedStudentInterest];
+        if (relatedKeywords && relatedKeywords.some(k => normalizedCourseInterest.includes(k))) {
+          return true;
+        }
+        
+        return false;
+      });
       
       if (hasDirectMatch) {
         score += 10;
-      } else if (interestData.secondaryInterests?.some(i => i.toLowerCase().includes(normalizedInterest))) {
+      } else if (interestData.secondaryInterests?.some(i => i.toLowerCase().includes(normalizedCourseInterest))) {
         score += 5;
       }
     });
