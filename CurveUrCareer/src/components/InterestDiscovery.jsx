@@ -1,5 +1,5 @@
 // Interest Discovery Component - Gamified "Career Quest" Edition
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useFormData } from '../hooks/useFormData.jsx';
 import { INTEREST_PROBE_QUESTIONS } from '../data/assessmentData';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 
 const InterestDiscovery = () => {
-  const { formData, updateFormData, nextStep, prevStep } = useFormData();
+  const { formData, updateFormData, nextStep } = useFormData();
   const [currentIdx, setCurrentIdx] = useState(0);
   const [selections, setSelections] = useState([]);
   const [isFinishing, setIsFinishing] = useState(false);

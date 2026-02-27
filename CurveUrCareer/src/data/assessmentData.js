@@ -1,107 +1,187 @@
-export const SKILL_DIMENSIONS = [
-  { id: 'logicalReasoning', name: 'Logical Reasoning' },
-  { id: 'analyticalThinking', name: 'Analytical thinking' },
-  { id: 'technicalSkills', name: 'Technical Skills' },
-  { id: 'problemSolving', name: 'Creative Problem Solving' },
-  { id: 'creativity', name: 'Creativity' },
-  { id: 'empathyEI', name: 'Empathy & Emotional Intelligence' },
-  { id: 'socialInteraction', name: 'Social Interaction' },
-  { id: 'researchAnalysis', name: 'Research & Analysis' },
-  { id: 'analyticalDepth', name: 'Analytical Depth' },
-  { id: 'leadership', name: 'Business Leadership' },
-  { id: 'moneyManagement', name: 'Money Management' }
+/**
+ * ASSESSMENT ENGINE DATA - ROADMAP V1
+ * Core Dimensions (Hidden Evaluation)
+ */
+export const HIDDEN_DIMENSIONS = [
+  { id: 'thinking_pattern', name: 'Thinking Pattern' },
+  { id: 'motivation_trigger', name: 'Motivation Trigger' },
+  { id: 'work_preference', name: 'Work Preference' },
+  { id: 'decision_style', name: 'Decision Style Under Pressure' },
+  { id: 'identity_reinforcement', name: 'Identity Reinforcement' }
 ];
 
-export const ASSESSMENT_PHASES = [
-  { id: 'story-adventure', title: 'Phase 1: Story Adventure', theme: 'indigo', icon: '🎭' },
-  { id: 'creators-lab', title: 'Phase 2: Creator\'s Lab', theme: 'purple', icon: '🏗️' },
-  { id: 'pattern-detective', title: 'Phase 3: Pattern Detective', theme: 'blue', icon: '🧩' },
-  { id: 'quick-fire', title: 'Phase 4: Quick Fire Round', theme: 'rose', icon: '🎲' },
-  { id: 'reflection-room', title: 'Phase 5: Reflection Room', theme: 'emerald', icon: '💬' }
+/**
+ * Behavioral Tags (10-14 Max)
+ */
+export const BEHAVIORAL_TAGS = [
+  'Analytical',
+  'Creative',
+  'Strategic',
+  'Systematic',
+  'Empathetic',
+  'Leadership',
+  'Execution',
+  'Exploratory',
+  'RiskFriendly',
+  'StabilityOriented',
+  'DetailFocused',
+  'BigPicture'
 ];
 
-export const ASSESSMENT_ITEMS = [
-  // Phase 1: Interactive Story Adventures
+/**
+ * The 10 Moments
+ */
+export const ASSESSMENT_MOMENTS = [
+  // Moment 1-2: Thinking Pattern
   {
-    id: 'story-1',
-    phase: 'story-adventure',
-    type: 'branching-scenario',
-    question: 'Your First Day at Dream School: Morning (7 AM)',
-    description: 'You wake up late! You have: Important Math test (1st period), Group project presentation (3rd period), and you forgot to charge your phone.',
+    id: 'moment-1',
+    dimension: 'thinking_pattern',
+    scenario: "You're given a mysterious locked box with no key. What's your first instinct?",
     options: [
-      { id: 'a', text: 'Rush without breakfast', icon: '🏃', timeCost: 5, consequence: 'You feel hungry but arrive early', dimensions: { logicalReasoning: 2, analyticalThinking: 1 } },
-      { id: 'b', text: 'Take 5 min to review math notes', icon: '📚', timeCost: 10, consequence: 'Focused but tight on time', dimensions: { logicalReasoning: 4, analyticalThinking: 2 } },
-      { id: 'c', text: 'WhatsApp group about presentation', icon: '👥', timeCost: 7, consequence: 'Coordinated but distracted', dimensions: { empathyEI: 4, socialInteraction: 3 } },
-      { id: 'd', text: 'Find phone charger first', icon: '🔋', timeCost: 12, consequence: 'Powered up but very late', dimensions: { analyticalThinking: 3, technicalSkills: 1 } }
+      { id: 'a', text: 'Look for serial numbers or manufacturer marks to research its origin.', tags: ['Analytical', 'DetailFocused'] },
+      { id: 'b', text: 'Imagine what could be inside and why it was hidden.', tags: ['Creative', 'BigPicture'] },
+      { id: 'c', text: 'Try common combinations or feel for internal mechanisms.', tags: ['Systematic', 'Execution'] },
+      { id: 'd', text: 'Consider who might have owned it and what it meant to them.', tags: ['Empathetic', 'Exploratory'] }
     ]
   },
-
-  // Phase 2: Build & Create Challenges
   {
-    id: 'build-1',
-    phase: 'creators-lab',
-    type: 'drag-drop-challenge',
-    question: 'Design Your Study Space',
-    description: 'Create the perfect study room for exam week. Budget: ₹15,000. Constraints: Productivity is key.',
-    items: [
-      { id: 'desk-lg', name: 'Large Desk', cost: 5000, tags: ['productivity'] },
-      { id: 'chair-erg', name: 'Ergonomic Chair', cost: 4000, tags: ['health', 'focus'] },
-      { id: 'lighting-bright', name: 'Bright LED', cost: 1000, tags: ['focus'] },
-      { id: 'plants', name: 'Plants 🪴', cost: 500, tags: ['calm'] },
-      { id: 'whiteboard', name: 'Whiteboard', cost: 2000, tags: ['organization'] },
-      { id: 'speaker', name: 'Music Speaker', cost: 3000, tags: ['vibe'] },
-      { id: 'purifier', name: 'Air Purifier', cost: 4500, tags: ['health'] }
-    ],
-    budget: 15000,
-    dimensions: { resourceAllocation: 4, creativity: 3, analyticalThinking: 2 }
-  },
-
-  // Phase 3: Pattern Detective
-  {
-    id: 'detect-1',
-    phase: 'pattern-detective',
-    type: 'data-infographic',
-    question: 'School Canteen Sales - Last Week',
-    description: 'Analyze the lunch sales data. Samosas (150-200), Sandwiches (40-60), Juice (75-100).',
-    chartData: [
-      { day: 'Mon', samosas: 150, sandwiches: 50, juice: 80 },
-      { day: 'Tue', samosas: 140, sandwiches: 55, juice: 75 },
-      { day: 'Wed', samosas: 180, sandwiches: 40, juice: 90 },
-      { day: 'Thu', samosas: 160, sandwiches: 60, juice: 85 },
-      { day: 'Fri', samosas: 200, sandwiches: 45, juice: 100 }
-    ],
-    questions: [
-      { query: 'Which day had highest sales overall?', type: 'click-graph', answer: 'Fri' },
-      { query: 'Why do you think samosas sell more?', type: 'select', options: ['Cheaper', 'Cultural preference', 'Fried food trend', 'Bad sandwich quality'] }
-    ],
-    dimensions: { researchAnalysis: 4, analyticalDepth: 3, logicalReasoning: 3 }
-  },
-
-  // Phase 4: Quick Fire Round
-  {
-    id: 'quick-1',
-    phase: 'quick-fire',
-    type: 'swipe-deck',
-    cards: [
-      { id: 'q1', text: 'You see a classmate sitting alone every day at lunch', options: { left: 'Mind business', right: 'Talk to them', up: 'Tell teacher', down: 'Observe' }, dimensions: { empathyEI: 1 } },
-      { id: 'q2', text: 'Internet crashed 10 min before online exam', options: { left: 'Call teacher', right: 'Mobile hotspot', up: 'Ask neighbor', down: 'Cyber cafe' }, dimensions: { logicalReasoning: 1 } }
-    ],
-    dimensions: { problemSolving: 4, empathyEI: 3 }
-  },
-
-  // Phase 5: Reflection Room
-  {
-    id: 'reflect-1',
-    phase: 'reflection-room',
-    type: 'ai-chat',
-    question: 'Career Reflection',
-    description: 'Help your friend Alex: "Should I take Science or Commerce? Parents want Science, but I love business."',
+    id: 'moment-2',
+    dimension: 'thinking_pattern',
+    scenario: "A new complex game has arrived. How do you start playing?",
     options: [
-      { id: 'r1', text: 'What do YOU want to do?', dimensions: { empathyEI: 4 } },
-      { id: 'r2', text: 'Parents usually know best tbh', dimensions: { socialInteraction: 2 } },
-      { id: 'r3', text: 'Let\'s list pros and cons together', dimensions: { logicalReasoning: 4 } }
-    ],
-    dimensions: { socialInteraction: 4, empathyEI: 2 }
+      { id: 'a', text: 'Read the entire rulebook carefully from start to finish.', tags: ['Systematic', 'DetailFocused'] },
+      { id: 'b', text: 'Start playing immediately and learn as things happen.', tags: ['Exploratory', 'RiskFriendly'] },
+      { id: 'c', text: 'Watch others play first to spot winning patterns.', tags: ['Strategic', 'Analytical'] },
+      { id: 'd', text: 'Try to find a way to simplify the rules for everyone.', tags: ['BigPicture', 'Leadership'] }
+    ]
+  },
+  // Moment 3-4: Work Preference
+  {
+    id: 'moment-3',
+    dimension: 'work_preference',
+    scenario: "In a group project, which role do you naturally gravitate towards?",
+    options: [
+      { id: 'a', text: 'Setting the deadlines and keeping everyone on track.', tags: ['Leadership', 'Systematic'] },
+      { id: 'b', text: 'Polishing the final product to make it look perfect.', tags: ['DetailFocused', 'Creative'] },
+      { id: 'c', text: 'Coming up with the "Big Idea" that nobody else thought of.', tags: ['BigPicture', 'Creative'] },
+      { id: 'd', text: 'Connecting people and resolving team conflicts.', tags: ['Empathetic', 'Leadership'] }
+    ]
+  },
+  {
+    id: 'moment-4',
+    dimension: 'work_preference',
+    scenario: "Your ideal workspace would be:",
+    options: [
+      { id: 'a', text: 'A busy hub where I constanty interact with different people.', tags: ['Leadership', 'Exploratory'] },
+      { id: 'b', text: 'A quiet, highly organized desk where I can focus on data.', tags: ['Analytical', 'StabilityOriented'] },
+      { id: 'c', text: 'A studio filled with tools and materials to experiment with.', tags: ['Creative', 'Exploratory'] },
+      { id: 'd', text: 'A command center where I manage various high-level moving parts.', tags: ['Strategic', 'BigPicture'] }
+    ]
+  },
+  // Moment 5: Motivation
+  {
+    id: 'moment-5',
+    dimension: 'motivation_trigger',
+    scenario: "What makes you feel most satisfied after a long day?",
+    options: [
+      { id: 'a', text: 'Knowing exactly how much progress I made on my list.', tags: ['Execution', 'Systematic'] },
+      { id: 'b', text: 'Coming up with a solution to a problem that stumped others.', tags: ['Strategic', 'Analytical'] },
+      { id: 'c', text: 'Creating something beautiful or unique that didn\'t exist before.', tags: ['Creative', 'BigPicture'] },
+      { id: 'd', text: 'Knowing that I helped someone overcome a difficult challenge.', tags: ['Empathetic', 'Leadership'] }
+    ]
+  },
+  // Moment 6: Identity
+  {
+    id: 'moment-6',
+    dimension: 'identity_reinforcement',
+    scenario: "If you were a character in a movie, you'd likely be the:",
+    options: [
+      { id: 'a', text: 'The Architect: Planning the grand design behind the scenes.', tags: ['Strategic', 'BigPicture'] },
+      { id: 'b', text: 'The Specialist: The one they call for specific, complex problems.', tags: ['Analytical', 'DetailFocused'] },
+      { id: 'c', text: 'The Innovator: Breaking rules to create a new way forward.', tags: ['Creative', 'RiskFriendly'] },
+      { id: 'd', text: 'The Guardian: Keeping the team safe and the system stable.', tags: ['StabilityOriented', 'Empathetic'] }
+    ]
+  },
+  // Moment 7-8: Pressure Behavior
+  {
+    id: 'moment-7',
+    dimension: 'decision_style',
+    scenario: "The internet goes down 2 hours before a major deadline. Your reaction is:",
+    options: [
+      { id: 'a', text: 'Immediately switch to offline tasks and look for alternatives.', tags: ['Execution', 'RiskFriendly'] },
+      { id: 'b', text: 'Calmly analyze the situation and find the most efficient workaround.', tags: ['Strategic', 'Analytical'] },
+      { id: 'c', text: 'Call everyone involved to coordinate a new plan or extension.', tags: ['Leadership', 'Empathetic'] },
+      { id: 'd', text: 'Stick to the original plan as much as possible but do it manually.', tags: ['StabilityOriented', 'Systematic'] }
+    ]
+  },
+  {
+    id: 'moment-8',
+    dimension: 'decision_style',
+    scenario: "You have to choose between a guaranteed small win or a risky but huge win.",
+    options: [
+      { id: 'a', text: 'The guaranteed win. Stability and consistency are better.', tags: ['StabilityOriented', 'Systematic'] },
+      { id: 'b', text: 'The risky win. I\'m comfortable with uncertainty for big growth.', tags: ['RiskFriendly', 'Exploratory'] },
+      { id: 'c', text: 'I\'ll find a way to bridge the two for a "balanced risk".', tags: ['Strategic', 'Analytical'] },
+      { id: 'd', text: 'I\'ll choose the one that benefits the most people involved.', tags: ['Empathetic', 'BigPicture'] }
+    ]
+  },
+  // Moment 9: Value Alignment
+  {
+    id: 'moment-9',
+    dimension: 'identity_reinforcement',
+    scenario: "Which of these quotes resonates most with you?",
+    options: [
+      { id: 'a', text: '"Knowledge is power, but data is its language."', tags: ['Analytical', 'DetailFocused'] },
+      { id: 'b', text: '"The best way to predict the future is to create it."', tags: ['Creative', 'RiskFriendly'] },
+      { id: 'c', text: '"Logic will get you from A to B. Imagination will take you everywhere."', tags: ['BigPicture', 'Exploratory'] },
+      { id: 'd', text: '"Coming together is a beginning; keeping together is progress."', tags: ['Leadership', 'Empathetic'] }
+    ]
+  },
+  // Moment 10: Reflection Instinct
+  {
+    id: 'moment-10',
+    dimension: 'thinking_pattern',
+    scenario: "After completing a major task, what do you usually do?",
+    options: [
+      { id: 'a', text: 'Review every step to see where I could be more efficient next time.', tags: ['Analytical', 'Systematic'] },
+      { id: 'b', text: 'Think about how this accomplishment fits into my long-term goals.', tags: ['Strategic', 'BigPicture'] },
+      { id: 'c', text: 'Celebrate the win and immediately look for the next creative spark.', tags: ['Exploratory', 'Creative'] },
+      { id: 'd', text: 'Ask the people involved how they felt about the whole process.', tags: ['Empathetic', 'Leadership'] }
+    ]
+  }
+];
+
+/**
+ * Career Direction Matrix
+ */
+export const CAREER_CLUSTERS = [
+  {
+    id: 'A',
+    tags: ['Analytical', 'Systematic'],
+    environments: 'Structured technical systems',
+    domains: ['Engineering', 'Data Science', 'Finance Systems', 'Software Architecture'],
+    reasoning: 'You thrive in environments that require logical parsing and systematic organization.'
+  },
+  {
+    id: 'B',
+    tags: ['Creative', 'Exploratory'],
+    environments: 'Innovation-led studios and media',
+    domains: ['UI/UX Design', 'Content Creation', 'Digital Branding', 'Product Innovation'],
+    reasoning: 'Your strength lies in seeing possibilities where others see walls, making you ideal for creative evolution.'
+  },
+  {
+    id: 'C',
+    tags: ['Empathetic', 'Leadership'],
+    environments: 'People-driven organizations and public service',
+    domains: ['Management', 'Human Resources', 'Civil Services', 'Psychology & Counseling'],
+    reasoning: 'You have a natural ability to guide people and understand the human element behind every system.'
+  },
+  {
+    id: 'D',
+    tags: ['Strategic', 'BigPicture'],
+    environments: 'Consultancy and high-level decision making',
+    domains: ['Business Strategy', 'Entrepreneurship', 'Policy Making', 'Investments'],
+    reasoning: 'You naturally look at the horizon, making you a strong candidate for navigating complex futures.'
   }
 ];
 
@@ -227,4 +307,3 @@ export const INTEREST_PROBE_QUESTIONS = [
     ]
   }
 ];
-

@@ -34,15 +34,26 @@ export const useRecommendations = (formData) => {
 
       // Refine recommendations if interactive assessment is done
       let refinedRecommendations = allRecommendations;
-      if (formData.assessmentResults?.isCompleted) {
+      if (formData.assessmentResults?.isCompleted && formData.assessmentResults.clusters?.length > 0) {
         // Boost courses that match the top career cluster from the assessment
-        const topCluster = formData.assessmentResults.careerMatches[0];
+        const topCluster = formData.assessmentResults.clusters[0];
+        const topTagNames = formData.assessmentResults.topTags.map(t => t.tag.toLowerCase());
+
         refinedRecommendations = allRecommendations.map(rec => {
-          // Check if course skills align with the core dimension of the top cluster
-          const isClusterMatch = topCluster.core.some(dim => 
-            rec.course.skills?.some(s => s.toLowerCase().includes(dim.toLowerCase().replace('skills', '').replace('thinking', '')))
+          // Check if course domains or description aligns with the top cluster domains
+          const isClusterMatch = topCluster.domains?.some(domain => 
+            rec.course.name.toLowerCase().includes(domain.toLowerCase()) ||
+            rec.course.description?.toLowerCase().includes(domain.toLowerCase())
           );
-          return isClusterMatch ? { ...rec, matchPercentage: Math.min(100, rec.matchPercentage + 8) } : rec;
+          
+          // Check for tag alignment
+          const tagAlignment = rec.course.skills?.filter(skill => 
+            topTagNames.some(tag => skill.toLowerCase().includes(tag))
+          ).length || 0;
+
+          const boost = (isClusterMatch ? 10 : 0) + (tagAlignment * 2);
+          
+          return boost > 0 ? { ...rec, matchPercentage: Math.min(100, rec.matchPercentage + boost) } : rec;
         }).sort((a, b) => b.matchPercentage - a.matchPercentage);
       }
 

@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { FormDataProvider } from './hooks/useFormData.jsx';
+import { LanguageProvider } from './hooks/useLanguage.jsx';
 import Navbar from './components/Navbar';
 import HomePage from './pages/HomePage';
 import AssessmentPage from './pages/AssessmentPage';
@@ -49,12 +50,14 @@ const MainContent = () => {
 
 function App() {
   return (
-    <FormDataProvider>
-      <Router>
-        <InitialRedirect />
-        <MainContent />
-      </Router>
-    </FormDataProvider>
+    <LanguageProvider>
+      <FormDataProvider>
+        <Router>
+          <InitialRedirect />
+          <MainContent />
+        </Router>
+      </FormDataProvider>
+    </LanguageProvider>
   );
 }
 

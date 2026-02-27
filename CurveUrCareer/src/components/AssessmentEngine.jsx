@@ -1,232 +1,201 @@
-// Assessment Engine - "Career Quest" Revamped Edition
-import { useState, useMemo } from 'react';
+// Assessment Engine - Roadmap Edition
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ASSESSMENT_PHASES, ASSESSMENT_ITEMS } from '../data/assessmentData';
-import { useFormData } from '../hooks/useFormData';
-import { calculateRawScores, normalizeScores, getCareerMapping } from '../utils/assessmentLogic';
+import { ASSESSMENT_MOMENTS } from '../data/assessmentData';
+import { useFormData } from '../hooks/useFormData.jsx';
+import { 
+  calculateEngineScores, 
+  getTopTags, 
+  getClusterMatches, 
+  generatePatternInsight,
+  generateExplorationPlan
+} from '../utils/assessmentLogic';
 import { 
   ChevronRight, 
-  Trophy, 
+  Sparkles,
   Zap, 
   ShieldCheck,
-  Star
+  BrainCircuit,
+  Flag
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-
-// Import New Gamification Components
-import StoryAdventure from './gamification/StoryAdventure';
-import CreatorsLab from './gamification/CreatorsLab';
-import PatternDetective from './gamification/PatternDetective';
-import QuickFireCards from './gamification/QuickFireCards';
-import ReflectionRoom from './gamification/ReflectionRoom';
 
 const AssessmentEngine = () => {
   const { updateFormData } = useFormData();
   const navigate = useNavigate();
-  const [currentPhaseIndex, setCurrentPhaseIndex] = useState(0);
+  const [currentMomentIndex, setCurrentMomentIndex] = useState(-1); // -1 for intro
   const [responses, setResponses] = useState([]);
-  const [isFinished, setIsFinished] = useState(false);
-  const [achievements, setAchievements] = useState([]);
+  const [isProcessing, setIsProcessing] = useState(false);
 
-  const currentPhase = ASSESSMENT_PHASES[currentPhaseIndex];
-  
-  // In the new model, each phase represents one major gamified item/scenario
-  const currentItem = useMemo(() => {
-    return ASSESSMENT_ITEMS.find(item => item.phase === currentPhase.id);
-  }, [currentPhase.id]);
+  // Persistence: Check if there's already a result
+  useEffect(() => {
+    const savedResult = localStorage.getItem('career_assessment_result');
+    if (savedResult) {
+      // Optional: Ask user if they want to restart or view results
+      // For now, let them retake if they navigate here
+    }
+  }, []);
 
-  const handleResponse = (response) => {
+  const startAssessment = () => {
+    setCurrentMomentIndex(0);
+  };
+
+  const currentMoment = ASSESSMENT_MOMENTS[currentMomentIndex];
+
+  const handleResponse = (choiceId) => {
+    if (isProcessing) return;
+    setIsProcessing(true);
+
     const newResponses = [
-      ...responses.filter(r => r.itemId !== currentItem.id),
-      { itemId: currentItem.id, ...response }
+      ...responses,
+      { momentId: currentMoment.id, choiceId }
     ];
     setResponses(newResponses);
 
-    // Achievement logic
-    if (currentPhaseIndex === 0) setAchievements([...achievements, 'Storyteller 🎭']);
-    if (currentPhaseIndex === 1) setAchievements([...achievements, 'The Builder 🏗️']);
-
-    if (currentPhaseIndex < ASSESSMENT_PHASES.length - 1) {
-      setCurrentPhaseIndex(currentPhaseIndex + 1);
-    } else {
-      finishAssessment(newResponses);
-    }
+    // Auto-advance with a slight delay for visual feedback
+    setTimeout(() => {
+      if (currentMomentIndex < ASSESSMENT_MOMENTS.length - 1) {
+        setCurrentMomentIndex(currentMomentIndex + 1);
+        setIsProcessing(false);
+      } else {
+        finishAssessment(newResponses);
+      }
+    }, 400);
   };
 
   const finishAssessment = (finalResponses) => {
-    const rawScores = calculateRawScores(finalResponses);
-    const skillProfile = normalizeScores(rawScores);
-    const careerMatches = getCareerMapping(skillProfile);
-
-    updateFormData('assessmentResults', {
-      responses: finalResponses,
-      skillProfile,
-      careerMatches,
-      isCompleted: true
-    });
+    const scores = calculateEngineScores(finalResponses);
+    const topTags = getTopTags(scores);
+    const clusters = getClusterMatches(topTags);
+    const insight = generatePatternInsight(topTags);
     
-    setIsFinished(true);
+    const result = {
+      timestamp: new Date().toISOString(),
+      topTags,
+      clusters: clusters.slice(0, 3).map(c => ({
+          ...c,
+          reasoning: c.reasoning // In a real app, this could be more dynamic
+      })),
+      insight,
+      explorationPlan: generateExplorationPlan(),
+      isCompleted: true
+    };
+
+    // Save to localStorage
+    localStorage.setItem('career_assessment_result', JSON.stringify(result));
+
+    // Update global state
+    updateFormData('assessmentResults', result);
+    
+    // Navigate to results
+    navigate('/results');
   };
 
-  if (isFinished) {
+  // Intro Screen
+  if (currentMomentIndex === -1) {
     return (
-      <div className="flex h-screen w-full items-center justify-center bg-slate-950 overflow-hidden relative">
-        <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/20 via-transparent to-blue-500/20"></div>
+      <div className="min-h-screen w-full flex items-center justify-center bg-slate-950 overflow-hidden relative">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-blue-500/10 via-transparent to-transparent"></div>
+        
         <motion.div 
-          initial={{ scale: 0.8, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          className="z-10 max-w-2xl w-full mx-4 p-12 text-center bg-white/5 backdrop-blur-3xl border border-white/10 rounded-[4rem] shadow-2xl relative overflow-hidden"
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="z-10 max-w-2xl w-full mx-4 p-8 md:p-16 text-center bg-white/5 backdrop-blur-3xl border border-white/10 rounded-[3rem] shadow-2xl"
         >
-          <motion.div 
-            animate={{ rotate: [0, 10, -10, 0] }}
-            transition={{ repeat: Infinity, duration: 4 }}
-            className="p-8 inline-block rounded-full bg-emerald-500/20 mb-8 border border-emerald-400/30 shadow-[0_0_50px_rgba(16,185,129,0.3)]"
-          >
-            <Trophy className="w-24 h-24 text-white" />
-          </motion.div>
-          
-          <h2 className="text-5xl font-black text-white mb-4 tracking-tighter">QUEST COMPLETE!</h2>
-          <div className="flex justify-center gap-2 mb-8">
-            <Star className="text-amber-400 fill-amber-400 w-6 h-6" />
-            <Star className="text-amber-400 fill-amber-400 w-6 h-6" />
-            <Star className="text-amber-400 fill-amber-400 w-6 h-6" />
-            <Star className="text-amber-400 fill-amber-400 w-6 h-6" />
-            <Star className="text-amber-400 fill-amber-400 w-6 h-6" />
+          <div className="w-20 h-20 bg-blue-500/20 rounded-2xl flex items-center justify-center mx-auto mb-8 border border-blue-400/30">
+            <Sparkles className="w-10 h-10 text-blue-400" />
           </div>
-
-          <p className="text-white/60 text-lg font-medium leading-relaxed mb-12">
-            You've navigated the Career Quest with excellence. Your hidden talents in {achievements.length > 0 ? achievements[0].split(' ')[0] : 'Thinking'} and Strategy are now mapped.
+          
+          <h1 className="text-4xl md:text-5xl font-black text-white mb-6 tracking-tight">Clarity Engine</h1>
+          <p className="text-white/60 text-lg mb-12 leading-relaxed">
+            This isn't a test. It's a mirror. <br />
+            <span className="font-bold text-white/80">Don't overthink.</span> Trust your first instinct.
           </p>
 
           <button
-            onClick={() => navigate('/results')}
-            className="group relative inline-flex items-center gap-4 px-12 py-6 bg-white text-slate-950 rounded-[2rem] font-black text-xl hover:bg-emerald-400 hover:text-white transition-all hover:scale-105 shadow-2xl"
+            onClick={startAssessment}
+            className="group relative flex items-center gap-4 px-10 py-5 bg-white text-slate-950 rounded-2xl font-black text-xl hover:bg-blue-400 hover:text-white transition-all hover:scale-105"
           >
-            VIEW YOUR LEGACY <ChevronRight className="w-8 h-8 group-hover:translate-x-2 transition-transform" />
+            START EXPLORATION <ChevronRight className="w-6 h-6 group-hover:translate-x-1 transition-transform" />
           </button>
+          
+          <p className="mt-8 text-white/30 text-xs font-bold uppercase tracking-widest">
+            Takes about 8 minutes • No right or wrong answers
+          </p>
         </motion.div>
       </div>
     );
   }
 
-  const renderPhaseContent = () => {
-    if (!currentItem) return <div className="text-white">Loading Quest Module...</div>;
-
-    switch (currentPhase.id) {
-      case 'story-adventure':
-        return <StoryAdventure item={currentItem} onResponse={handleResponse} />;
-      case 'creators-lab':
-        return <CreatorsLab item={currentItem} onResponse={handleResponse} />;
-      case 'pattern-detective':
-        return <PatternDetective item={currentItem} onResponse={handleResponse} />;
-      case 'quick-fire':
-        return <QuickFireCards item={currentItem} onResponse={handleResponse} />;
-      case 'reflection-room':
-        return <ReflectionRoom item={currentItem} onResponse={handleResponse} />;
-      default:
-        return <div className="text-white">Quest Phase Unrecognized: {currentPhase.id}</div>;
-    }
-  };
-
-  const themeColors = {
-    indigo: 'from-indigo-950 via-slate-900 to-black',
-    purple: 'from-purple-950 via-slate-900 to-black',
-    blue: 'from-blue-950 via-slate-900 to-black',
-    rose: 'from-rose-950 via-slate-900 to-black',
-    emerald: 'from-emerald-950 via-slate-900 to-black'
-  };
-
   return (
-    <div className={`min-h-screen w-full flex flex-col bg-gradient-to-br ${themeColors[currentPhase.theme]} relative selection:bg-white/20 pb-24`}>
-      {/* Dynamic Background */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+    <div className="min-h-screen w-full flex flex-col bg-slate-950 relative selection:bg-blue-500/30">
+      {/* Background Decor */}
+      <div className="fixed inset-0 pointer-events-none">
+        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-blue-500/5 rounded-full blur-[120px]"></div>
+        <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-indigo-500/5 rounded-full blur-[120px]"></div>
+      </div>
+
+      {/* Progress Bar */}
+      <div className="fixed top-0 left-0 w-full h-1.5 bg-white/5 z-50">
         <motion.div 
-          animate={{ scale: [1, 1.2, 1], rotate: [0, 45, 0] }}
-          transition={{ duration: 20, repeat: Infinity }}
-          className="absolute -top-[20%] -left-[10%] w-[60%] h-[60%] bg-emerald-500/10 rounded-full blur-[120px]" 
-        />
-        <motion.div 
-          animate={{ scale: [1, 1.3, 1], rotate: [0, -45, 0] }}
-          transition={{ duration: 25, repeat: Infinity }}
-          className="absolute -bottom-[20%] -right-[10%] w-[50%] h-[50%] bg-blue-500/10 rounded-full blur-[120px]" 
+          className="h-full bg-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.5)]"
+          initial={{ width: 0 }}
+          animate={{ width: `${((currentMomentIndex + 1) / ASSESSMENT_MOMENTS.length) * 100}%` }}
         />
       </div>
 
-      {/* Modern HUD Header - Sticky */}
-      <header className="sticky top-0 px-6 md:px-12 py-6 flex justify-between items-center z-50 bg-black/20 backdrop-blur-xl border-b border-white/5">
-        <div className="flex items-center gap-6">
-           <div className="relative">
-              <div className="absolute inset-0 bg-white/20 rounded-2xl blur-lg animate-pulse"></div>
-              <div className="relative w-14 h-14 bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl flex items-center justify-center text-2xl shadow-2xl">
-                {currentPhase.icon}
-              </div>
-           </div>
-           <div>
-              <div className="flex items-center gap-2 mb-1">
-                 <span className="px-3 py-0.5 rounded-full bg-white/10 text-white/40 font-black text-[10px] uppercase tracking-widest border border-white/5">
-                    Quest Level {currentPhaseIndex + 1}
-                 </span>
-              </div>
-              <h1 className="text-2xl md:text-3xl font-black text-white tracking-tighter uppercase">{currentPhase.title}</h1>
-           </div>
-        </div>
+      {/* Main Moment Area */}
+      <main className="flex-1 flex items-center justify-center p-6 relative z-10">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={currentMoment.id}
+            initial={{ opacity: 0, x: 20, filter: 'blur(10px)' }}
+            animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
+            exit={{ opacity: 0, x: -20, filter: 'blur(10px)' }}
+            className="w-full max-w-4xl"
+          >
+            <div className="mb-12">
+               <span className="text-blue-400 font-black text-sm uppercase tracking-[0.3em] mb-4 block">
+                 Moment {currentMomentIndex + 1} of {ASSESSMENT_MOMENTS.length}
+               </span>
+               <h2 className="text-3xl md:text-4xl font-bold text-white leading-tight tracking-tight">
+                 {currentMoment.scenario}
+               </h2>
+            </div>
 
-        <div className="hidden lg:flex flex-col items-end gap-3 min-w-[300px]">
-           <div className="flex justify-between w-full text-white/40 font-black text-[10px] uppercase tracking-[0.3em]">
-              <span>MISSION PROGRESS</span>
-              <span>{Math.round(((currentPhaseIndex + 1) / ASSESSMENT_PHASES.length) * 100)}%</span>
-           </div>
-           <div className="w-full h-2 bg-white/5 rounded-full overflow-hidden border border-white/5 p-[1px]">
-              <motion.div 
-                className="h-full bg-gradient-to-r from-emerald-400 to-blue-400 rounded-full shadow-[0_0_15px_rgba(52,211,153,0.5)]"
-                initial={{ width: 0 }}
-                animate={{ width: `${((currentPhaseIndex + 1) / ASSESSMENT_PHASES.length) * 100}%` }}
-                transition={{ type: 'spring', damping: 20 }}
-              />
-           </div>
-        </div>
-      </header>
-
-      {/* Main Quest Area */}
-      <main className="flex-1 px-6 md:px-12 py-12 relative z-30 flex flex-col items-center">
-        <div className="w-full max-w-5xl">
-           <AnimatePresence mode="wait">
-              <motion.div
-                key={currentPhase.id}
-                initial={{ opacity: 0, y: 30, filter: 'blur(10px)' }}
-                animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
-                exit={{ opacity: 0, y: -30, filter: 'blur(10px)' }}
-                transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-                className="w-full"
-              >
-                {renderPhaseContent()}
-              </motion.div>
-           </AnimatePresence>
-        </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {currentMoment.options.map((option) => (
+                <button
+                  key={option.id}
+                  disabled={isProcessing}
+                  onClick={() => handleResponse(option.id)}
+                  className={`
+                    group p-6 md:p-8 text-left rounded-3xl border border-white/5 bg-white/5 hover:bg-white/10 hover:border-white/20 transition-all active:scale-95
+                    ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''}
+                  `}
+                >
+                  <div className="flex items-start gap-4">
+                    <div className="mt-1 w-6 h-6 rounded-full border-2 border-white/20 group-hover:border-blue-400 transition-colors flex-shrink-0" />
+                    <p className="text-lg text-white/80 group-hover:text-white transition-colors leading-relaxed">
+                      {option.text}
+                    </p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </motion.div>
+        </AnimatePresence>
       </main>
 
-      {/* Modern Footer HUD - Sticky at bottom */}
-      <footer className="fixed bottom-0 w-full px-6 md:px-12 py-4 bg-black/60 backdrop-blur-2xl border-t border-white/10 z-50 flex justify-between items-center text-[10px] font-black uppercase tracking-[0.4em] text-white/20">
-        <div className="flex items-center gap-6">
-           <div className="flex items-center gap-2 text-emerald-500/60">
-              <ShieldCheck className="w-4 h-4" /> SECURE PSYCHOMETRIC CORE
-           </div>
-           <div className="hidden md:block h-4 w-px bg-white/10" />
-           <div className="hidden md:flex items-center gap-2">
-              <Star className="w-4 h-4 fill-white/20" /> {achievements.length} BADGES EARNED
-           </div>
+      {/* Footer HUD */}
+      <footer className="p-8 flex justify-between items-center text-[10px] font-black uppercase tracking-[0.4em] text-white/20">
+        <div className="flex items-center gap-4">
+           <BrainCircuit className="w-4 h-4" /> 
+           <span>Clarity Core v1.0 • Bias detected: None</span>
         </div>
-        <div className="flex gap-4">
-           {achievements.map((ach, i) => (
-             <motion.span 
-              initial={{ scale: 0, opacity: 0 }} 
-              animate={{ scale: 1, opacity: 1 }} 
-              key={i} 
-              className="px-3 py-1 bg-white/5 rounded-full border border-white/10 text-white/60 font-bold"
-             >
-               {ach}
-             </motion.span>
-           ))}
+        <div className="flex items-center gap-4">
+           <Flag className="w-4 h-4" />
+           <span>This is direction, not destiny</span>
         </div>
       </footer>
     </div>
@@ -234,4 +203,3 @@ const AssessmentEngine = () => {
 };
 
 export default AssessmentEngine;
-
