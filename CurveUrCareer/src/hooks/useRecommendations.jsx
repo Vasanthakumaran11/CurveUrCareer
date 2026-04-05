@@ -1,5 +1,5 @@
 // Custom hook for generating course and college recommendations
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { coursesData } from '../data/coursesData.js';
 import { collegesData } from '../data/collegesData.js';
 import { careerPaths } from '../data/careerPaths.js';
@@ -12,8 +12,35 @@ import {
   generateAnalysisSummary
 } from '../utils/scoringLogic.js';
 import { categorizeColleges } from '../utils/careerRules.js';
+import { fetchColleges } from '../services/firestoreService.js';
 
 export const useRecommendations = (formData) => {
+  const [firebaseColleges, setFirebaseColleges] = useState([]);
+  const [collegesLoading, setCollegesLoading] = useState(true);
+
+  // Fetch colleges from Firebase on mount
+  useEffect(() => {
+    const loadColleges = async () => {
+      try {
+        const result = await fetchColleges();
+        if (result.success) {
+          setFirebaseColleges(result.data);
+        } else {
+          console.warn('Failed to fetch colleges from Firebase, using local data:', result.message);
+        }
+      } catch (error) {
+        console.error('Error fetching colleges from Firebase:', error);
+      } finally {
+        setCollegesLoading(false);
+      }
+    };
+
+    loadColleges();
+  }, []);
+
+  // Use Firebase colleges if available, otherwise fall back to local data
+  const colleges = firebaseColleges.length > 0 ? firebaseColleges : collegesData;
+
   // Calculate recommendations when form data changes
   const results = useMemo(() => {
     if (!formData || !formData.academic || !formData.academic.stream) {
@@ -56,7 +83,7 @@ export const useRecommendations = (formData) => {
       let categorizedColleges = { dream: [], realistic: [], safe: [] };
       if (top.length > 0) {
         const topCourseIds = top.map(r => r.course.id);
-        const relevantColleges = collegesData.filter(college => {
+        const relevantColleges = colleges.filter(college => {
           const offersCourse = college.courses.some(courseId => topCourseIds.includes(courseId));
           if (!offersCourse) return false;
 
@@ -86,10 +113,10 @@ export const useRecommendations = (formData) => {
       console.error('Error generating recommendations:', err);
       return null;
     }
-  }, [formData]);
+  }, [formData, colleges]);
 
-  const loading = false;
-  const error = results ? null : 'Pending assessment completion...';
+  const loading = collegesLoading;
+  const error = results ? null : collegesLoading ? 'Loading college data...' : 'Pending assessment completion...';
 
   const recommendations = results?.recommendations || [];
   const topRecommendations = results?.topRecommendations || [];

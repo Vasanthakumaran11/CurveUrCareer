@@ -158,7 +158,7 @@ const LifeGoalsAndReality = () => {
               <div className="space-y-6 pt-4">
                 <div className="flex justify-between items-end mb-2">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] flex items-center gap-2">
-                    <DollarSign className="w-4 h-4" /> Target Compensation
+                     Targeted Income
                   </label>
                   <div className="text-2xl font-black text-blue-600 italic">
                     {localData.expectations.minSalary}<span className="text-xs uppercase ml-1 not-italic opacity-40">LPA</span>
@@ -194,8 +194,8 @@ const LifeGoalsAndReality = () => {
                   </div>
                 </div>
                 <div className="space-y-1">
-                  <span className="text-sm font-black text-slate-900 uppercase tracking-widest block">Elite Academic Path</span>
-                  <span className="text-xs font-medium text-slate-400">Planning for Masters/PhD or Specialization</span>
+                  <span className="text-sm font-black text-slate-900 uppercase tracking-widest block">Planning for Masters/PhD or Specialization</span>
+
                 </div>
               </motion.label>
             </div>
@@ -285,50 +285,6 @@ const LifeGoalsAndReality = () => {
             </div>
           </section>
 
-          {/* New Baseline Self-Assessment */}
-          <section className="bg-slate-900 rounded-[3.5rem] p-10 md:p-14 border border-white/10 shadow-3xl text-white space-y-12 relative overflow-hidden">
-            <div className="absolute top-0 right-0 p-12 opacity-5">
-              <Zap className="w-48 h-48" />
-            </div>
-            
-            <div className="flex items-center gap-4 relative z-10">
-              <div className="w-16 h-16 bg-white/10 backdrop-blur-xl rounded-3xl flex items-center justify-center text-white border border-white/20">
-                <Zap className="w-8 h-8" />
-              </div>
-              <h2 className="text-2xl font-black uppercase tracking-tight">Neural Scan</h2>
-            </div>
-            
-            <div className="space-y-10 relative z-10">
-              {[
-                { id: 'leadership', label: 'Command Presence', icon: '👑', color: 'from-blue-500 to-indigo-500' },
-                { id: 'moneyManagement', label: 'Fiscal Intelligence', icon: '💰', color: 'from-emerald-500 to-teal-500' },
-                { id: 'creativity', label: 'Innovation Core', icon: '🎨', color: 'from-rose-500 to-orange-500' },
-                { id: 'entrepreneurialDrive', label: 'Venture Drive', icon: '🚀', color: 'from-amber-500 to-yellow-500' }
-              ].map(attr => (
-                <div key={attr.id} className="space-y-4">
-                  <div className="flex justify-between items-end">
-                    <span className="text-xs font-black uppercase tracking-widest text-white/40">{attr.label}</span>
-                    <span className="text-xl font-black italic">{localData.selfAssessment[attr.id]}<span className="text-[10px] ml-1 opacity-40">%</span></span>
-                  </div>
-                  <div className="relative h-2 bg-white/10 rounded-full overflow-hidden">
-                    <motion.div 
-                      initial={{ width: 0 }}
-                      animate={{ width: `${localData.selfAssessment[attr.id]}%` }}
-                      className={`absolute inset-0 bg-gradient-to-r ${attr.color}`}
-                    />
-                    <input
-                      type="range"
-                      min="1"
-                      max="100"
-                      value={localData.selfAssessment[attr.id]}
-                      onChange={(e) => updateSection('selfAssessment', attr.id, parseInt(e.target.value))}
-                      className="absolute inset-0 w-full opacity-0 cursor-pointer z-20"
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
         </div>
       </div>
 

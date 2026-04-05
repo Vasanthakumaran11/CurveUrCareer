@@ -1,15 +1,16 @@
 // Results Dashboard Component
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useFormData } from '../hooks/useFormData.jsx';
 import { useRecommendations } from '../hooks/useRecommendations.jsx';
 import RecommendationCard from './RecommendationCard';
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
-import { Download, TrendingUp, Award, Building2, Map, Brain } from 'lucide-react';
+import { Download, TrendingUp, Award, Building2, Map, Brain, Save, AlertCircle, CheckCircle } from 'lucide-react';
 import { downloadPDFReport } from '../utils/pdfGenerator';
 import PathwayVisualizer from './PathwayVisualizer';
+import { saveAssessmentResult } from '../services/firestoreService.js';
 
 const ResultsDashboard = () => {
-  const { formData } = useFormData();
+  const { formData, getFromSession, saveToSession } = useFormData();
   const {
     topRecommendations,
     alternativeRecommendations,
@@ -22,6 +23,58 @@ const ResultsDashboard = () => {
   } = useRecommendations(formData);
 
   const [activeTab, setActiveTab] = useState('overview');
+  const [saveStatus, setSaveStatus] = useState(null); // null, 'saving', 'saved', 'error'
+
+  // Save assessment results to Firebase when component mounts and results are available
+  useEffect(() => {
+    const saveAssessmentToFirebase = async () => {
+      // Check if assessment is completed and not already saved
+      if (formData.assessmentResults?.isCompleted && !getFromSession('assessmentSaved')) {
+        setSaveStatus('saving');
+
+        try {
+          // Extract top tags from career matches
+          const topTags = formData.assessmentResults.careerMatches
+            .slice(0, 3)
+            .map(match => match.name);
+
+          // Extract directions from recommendations
+          const directions = topRecommendations
+            .slice(0, 3)
+            .map(rec => rec.course.name);
+
+          const assessmentData = {
+            name: formData.academic?.name || 'Anonymous User',
+            topTags,
+            directions,
+            skillProfile: formData.assessmentResults.skillProfile,
+            careerMatches: formData.assessmentResults.careerMatches,
+            academicProfile: formData.academic,
+            interests: formData.interests,
+            constraints: formData.constraints,
+            userId: getFromSession('userId') || null // For future authentication
+          };
+
+          const result = await saveAssessmentResult(assessmentData);
+
+          if (result.success) {
+            setSaveStatus('saved');
+            saveToSession('assessmentSaved', true);
+            saveToSession('assessmentId', result.id);
+            console.log('Assessment saved successfully with ID:', result.id);
+          } else {
+            setSaveStatus('error');
+            console.error('Failed to save assessment:', result.error);
+          }
+        } catch (error) {
+          setSaveStatus('error');
+          console.error('Error saving assessment to Firebase:', error);
+        }
+      }
+    };
+
+    saveAssessmentToFirebase();
+  }, [formData.assessmentResults?.isCompleted, getFromSession, saveToSession, topRecommendations]);
 
   if (loading) {
     return (
@@ -72,13 +125,42 @@ const ResultsDashboard = () => {
               Based on your profile, we found {topRecommendations.length} recommended courses
             </p>
           </div>
-          <button
-            onClick={handleDownloadReport}
-            className="flex items-center gap-2 px-6 py-3 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-all shadow-lg"
-          >
-            <Download className="w-5 h-5" />
-            Download PDF
-          </button>
+          <div className="flex items-center gap-4">
+            {/* Save Status Indicator */}
+            {saveStatus && (
+              <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium ${
+                saveStatus === 'saving' ? 'bg-yellow-100 text-yellow-800' :
+                saveStatus === 'saved' ? 'bg-green-100 text-green-800' :
+                'bg-red-100 text-red-800'
+              }`}>
+                {saveStatus === 'saving' && (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-yellow-600"></div>
+                    <span>Saving...</span>
+                  </>
+                )}
+                {saveStatus === 'saved' && (
+                  <>
+                    <CheckCircle className="w-4 h-4" />
+                    <span>Saved</span>
+                  </>
+                )}
+                {saveStatus === 'error' && (
+                  <>
+                    <AlertCircle className="w-4 h-4" />
+                    <span>Save Failed</span>
+                  </>
+                )}
+              </div>
+            )}
+            <button
+              onClick={handleDownloadReport}
+              className="flex items-center gap-2 px-6 py-3 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-all shadow-lg"
+            >
+              <Download className="w-5 h-5" />
+              Download PDF
+            </button>
+          </div>
         </div>
 
         {/* Student Summary */}
