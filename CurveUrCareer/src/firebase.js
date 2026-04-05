@@ -1,6 +1,7 @@
 // Firebase configuration and initialization
 import { initializeApp } from 'firebase/app';
 import { getFirestore } from 'firebase/firestore';
+import { getAuth, GoogleAuthProvider } from 'firebase/auth';
 
 // Validate Firebase configuration
 const validateFirebaseConfig = () => {
@@ -14,24 +15,8 @@ const validateFirebaseConfig = () => {
 
   if (missingVars.length > 0) {
     const errorMsg = `Missing required Firebase environment variables: ${missingVars.join(', ')}`;
-    console.error(errorMsg);
-    throw new Error(errorMsg);
-  }
-
-  const apiKey = import.meta.env.VITE_FIREBASE_API_KEY;
-  const authDomain = import.meta.env.VITE_FIREBASE_AUTH_DOMAIN;
-  const projectId = import.meta.env.VITE_FIREBASE_PROJECT_ID;
-
-  if (!apiKey || apiKey.length < 20) {
-    throw new Error('Invalid Firebase API key. Please check your .env file.');
-  }
-
-  if (!authDomain || !authDomain.includes('.firebaseapp.com')) {
-    throw new Error('Invalid Firebase auth domain. Please check your .env file.');
-  }
-
-  if (!projectId || projectId.length < 5) {
-    throw new Error('Invalid Firebase project ID. Please check your .env file.');
+    console.warn(errorMsg);
+    return false;
   }
 
   return true;
@@ -50,25 +35,27 @@ const firebaseConfig = {
 // Initialize Firebase app with error handling
 let app;
 let db;
+let auth;
+let googleProvider;
 
-try {
-  validateFirebaseConfig();
-  app = initializeApp(firebaseConfig);
-  db = getFirestore(app);
-  console.log('Firebase initialized successfully');
-} catch (error) {
-  console.error('Firebase initialization failed:', error);
-  // Graceful degradation - app can still run without Firebase
-  app = null;
-  db = null;
+if (validateFirebaseConfig()) {
+  try {
+    app = initializeApp(firebaseConfig);
+    db = getFirestore(app);
+    auth = getAuth(app);
+    googleProvider = new GoogleAuthProvider();
+    console.log('Firebase initialized successfully');
+  } catch (error) {
+    console.error('Firebase initialization failed:', error);
+  }
 }
 
 // Export Firebase instances
-export { app, db };
+export { app, db, auth, googleProvider };
 
 // Export a function to check if Firebase is available
 export const isFirebaseAvailable = () => {
-  return app !== null && db !== null;
+  return !!app && !!db && !!auth;
 };
 
 // Export error types for better error handling
