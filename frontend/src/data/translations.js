@@ -2,9 +2,13 @@ export const translations = {
   en: {
     navbar: {
       home: "Home",
-      assessment: "Assessment",
-      results: "Results",
-      learning: "Learning",
+      exploreSkills: "Explore Skills",
+      learningPaths: "Learning Paths",
+      discoverYourself: "Discover Yourself",
+      careerDirection: "Career Direction",
+      skillGapAnalyzer: "Skill Gap Analyzer",
+      growthDashboard: "Growth Dashboard",
+      colleges: "Colleges",
       about: "About",
       login: "Login",
       signup: "Sign Up",
@@ -35,9 +39,13 @@ export const translations = {
   ta: {
     navbar: {
       home: "முகப்பு",
-      assessment: "மதிப்பீடு",
-      results: "முடிவுகள்",
-      learning: "கற்றல்",
+      exploreSkills: "திறன்களை ஆராயுங்கள்",
+      learningPaths: "கற்றல் பாதைகள்",
+      discoverYourself: "உங்களை கண்டறியுங்கள்",
+      careerDirection: "தொழில் திசை",
+      skillGapAnalyzer: "திறன் இடைவெளி பகுப்பாய்வி",
+      growthDashboard: "வளர்ச்சி டாஷ்போர்டு",
+      colleges: "கல்லூரிகள்",
       about: "பற்றி",
       login: "உள்நுழை",
       signup: "பதிவு செய்க",

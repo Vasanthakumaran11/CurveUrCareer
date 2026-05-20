@@ -31,10 +31,14 @@ const Navbar = () => {
 
   const navLinks = [
     { name: t('navbar.home'), path: '/' },
-    { name: t('navbar.assessment'), path: '/assessment' },
-    { name: t('navbar.results'), path: '/results' },
-    { name: t('navbar.learning'), path: '/learning' },
-    { name: t('navbar.about'), path: '#' },
+    { name: t('navbar.exploreSkills'), path: '/#explore-skills' },
+    { name: t('navbar.learningPaths'), path: '/learning' },
+    { name: t('navbar.discoverYourself'), path: '/assessment' },
+    { name: t('navbar.careerDirection'), path: '/#career-direction' },
+    { name: t('navbar.skillGapAnalyzer'), path: '/#skill-gap' },
+    { name: t('navbar.growthDashboard'), path: '/#growth-dashboard' },
+    { name: t('navbar.colleges'), path: '/#colleges' },
+    { name: t('navbar.about'), path: '/about' },
   ];
 
   return (
@@ -53,12 +57,12 @@ const Navbar = () => {
         </Link>
         
         {/* Desktop Navigation */}
-        <div className="hidden md:flex items-center gap-8">
+        <div className="hidden xl:flex items-center gap-5">
           {navLinks.map((link) => (
             <Link 
               key={link.path} 
               to={link.path} 
-              className="text-sm font-semibold text-slate-600 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+              className="text-xs lg:text-sm font-semibold text-slate-600 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors whitespace-nowrap"
             >
               {link.name}
             </Link>
@@ -127,7 +131,7 @@ const Navbar = () => {
 
           {/* Mobile Menu Button */}
           <button 
-            className="md:hidden p-2 text-slate-600 dark:text-slate-400"
+            className="xl:hidden p-2 text-slate-600 dark:text-slate-400"
             onClick={() => setIsMenuOpen(!isMenuOpen)}
           >
             {isMenuOpen ? <X /> : <Menu />}
@@ -143,7 +147,7 @@ const Navbar = () => {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[55] md:hidden"
+              className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[55] xl:hidden"
               onClick={() => setIsMenuOpen(false)}
             />
             <motion.div
@@ -151,7 +155,7 @@ const Navbar = () => {
               animate={{ x: 0 }}
               exit={{ x: '100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="fixed top-0 right-0 bottom-0 w-3/4 max-w-sm bg-white dark:bg-slate-900 z-[60] shadow-2xl p-6 md:hidden flex flex-col pt-20"
+              className="fixed top-0 right-0 bottom-0 w-3/4 max-w-sm bg-white dark:bg-slate-900 z-[60] shadow-2xl p-6 xl:hidden flex flex-col pt-20 overflow-y-auto"
             >
               <div className="space-y-6">
                 {navLinks.map((link) => (

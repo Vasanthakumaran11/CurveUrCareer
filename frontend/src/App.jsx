@@ -1,17 +1,41 @@
-import { useEffect } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { FormDataProvider } from './contexts/FormDataProvider';
 import { AuthProvider } from './contexts/AuthProvider';
 import { SettingsProvider } from './contexts/SettingsProvider';
 import Navbar from './components/Navbar';
-import HomePage from './pages/HomePage';
-import AssessmentPage from './pages/AssessmentPage';
-import ResultsPage from './pages/ResultsPage';
-import LoginPage from './pages/Auth/LoginPage';
-import SignupPage from './pages/Auth/SignupPage';
-import LearningDashboard from './pages/Learning/LearningDashboard';
-import CourseDetails from './pages/Learning/CourseDetails';
 import ProtectedRoute from './components/ProtectedRoute';
+
+const HomePage = lazy(() => import('./pages/HomePage'));
+const AssessmentPage = lazy(() => import('./pages/AssessmentPage'));
+const ResultsPage = lazy(() => import('./pages/ResultsPage'));
+const LoginPage = lazy(() => import('./pages/Auth/LoginPage'));
+const SignupPage = lazy(() => import('./pages/Auth/SignupPage'));
+const LearningDashboard = lazy(() => import('./pages/Learning/LearningDashboard'));
+const CourseDetails = lazy(() => import('./pages/Learning/CourseDetails'));
+const AboutPage = lazy(() => import('./pages/AboutPage'));
+
+// A component that listens to URL changes and automatically scrolls to hashes smoothly
+const ScrollToHash = () => {
+  const { hash, pathname } = useLocation();
+
+  useEffect(() => {
+    if (hash) {
+      const id = hash.replace('#', '');
+      const element = document.getElementById(id);
+      if (element) {
+        const timeoutId = setTimeout(() => {
+          element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 150);
+        return () => clearTimeout(timeoutId);
+      }
+    } else {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [hash, pathname]);
+
+  return null;
+};
 
 // Improved redirect logic to only redirect from non-existent routes if necessary
 // but allowed professional deep linking
@@ -41,6 +65,7 @@ const MainContent = () => {
           <Route path="/" element={<HomePage />} />
           <Route path="/assessment" element={<AssessmentPage />} />
           <Route path="/results" element={<ResultsPage />} />
+          <Route path="/about" element={<AboutPage />} />
           
           {/* Authentication Routes */}
           <Route path="/login" element={<LoginPage />} />
@@ -69,8 +94,11 @@ function App() {
       <AuthProvider>
         <FormDataProvider>
           <Router>
+            <ScrollToHash />
             <InitialRedirect />
-            <MainContent />
+            <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-slate-500">Loading…</div>}>
+              <MainContent />
+            </Suspense>
           </Router>
         </FormDataProvider>
       </AuthProvider>

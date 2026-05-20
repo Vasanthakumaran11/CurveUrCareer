@@ -1,10 +1,14 @@
 // PDF Report Generation using jsPDF
-import jsPDF from 'jspdf';
+const loadJsPDF = async () => {
+  const module = await import('jspdf');
+  return module.default || module;
+};
 
 /**
  * Generate comprehensive career guidance PDF report
  */
-export const generatePDFReport = (formData, recommendations) => {
+export const generatePDFReport = (jsPDF, formData, recommendations) => {
+
   const doc = new jsPDF();
   let yPosition = 20;
   const pageWidth = doc.internal.pageSize.getWidth();
@@ -245,8 +249,9 @@ export const generatePDFReport = (formData, recommendations) => {
 /**
  * Download PDF report
  */
-export const downloadPDFReport = (formData, recommendations, analysis) => {
-  const doc = generatePDFReport(formData, recommendations, analysis);
+export const downloadPDFReport = async (formData, recommendations, analysis) => {
+  const jsPDF = await loadJsPDF();
+  const doc = generatePDFReport(jsPDF, formData, recommendations, analysis);
   const fileName = `Career_Guidance_Report_${new Date().toISOString().split('T')[0]}.pdf`;
   doc.save(fileName);
 };
@@ -254,8 +259,9 @@ export const downloadPDFReport = (formData, recommendations, analysis) => {
 /**
  * Preview PDF in new tab
  */
-export const previewPDFReport = (formData, recommendations, analysis) => {
-  const doc = generatePDFReport(formData, recommendations, analysis);
+export const previewPDFReport = async (formData, recommendations, analysis) => {
+  const jsPDF = await loadJsPDF();
+  const doc = generatePDFReport(jsPDF, formData, recommendations, analysis);
   const pdfBlob = doc.output('blob');
   const pdfUrl = URL.createObjectURL(pdfBlob);
   window.open(pdfUrl, '_blank');

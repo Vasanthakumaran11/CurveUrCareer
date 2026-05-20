@@ -28,9 +28,12 @@ const ResultsDashboard = () => {
   useEffect(() => {
     if (formData.assessmentResults?.isCompleted && !getFromSession('assessmentSaved')) {
       saveToSession('assessmentSaved', true);
-      setSaveStatus('saved');
+      setTimeout(() => {
+        setSaveStatus('saved');
+      }, 0);
     }
   }, [formData.assessmentResults?.isCompleted, getFromSession, saveToSession]);
+
 
   if (loading) {
     return (
@@ -66,8 +69,12 @@ const ResultsDashboard = () => {
         level: value
       })) : []);
 
-  const handleDownloadReport = () => {
-    downloadPDFReport(formData, topRecommendations, analysisSummary);
+  const handleDownloadReport = async () => {
+    try {
+      await downloadPDFReport(formData, topRecommendations, analysisSummary);
+    } catch (error) {
+      console.error('PDF download failed:', error);
+    }
   };
 
   return (
