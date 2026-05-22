@@ -1,8 +1,9 @@
 // Premium Modern Landing Page - AI-Powered Student Growth Ecosystem
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Linkedin, Mail, Sparkles, Trophy, Flame, Target, BookOpen, Compass, Shield, CheckCircle2, AlertTriangle, Play, ChevronRight, Zap } from 'lucide-react';
+import { Linkedin, Mail, Sparkles, Trophy, Flame, Target, BookOpen, Compass, Shield, CheckCircle2, AlertTriangle, Play, ChevronRight, Zap, Lock } from 'lucide-react';
+import { useAuth } from '../hooks/useAuth';
 
 // Animated Particle Background
 const FloatingParticles = () => {
@@ -135,17 +136,24 @@ const CTAButtons = () => (
         Start Exploring
       </button>
     </Link>
-    <Link to="/assessment" className="w-full sm:flex-1">
+    <Link to="/discover-yourself" className="w-full sm:flex-1">
     <button 
       className="w-full sm:flex-1 h-14 bg-gradient-to-r from-orange-500 to-amber-600 text-white font-bold rounded-xl hover:shadow-2xl hover:shadow-orange-500/50 transition-all duration-300 hover:-translate-y-1 hover:scale-[1.02] active:scale-95 text-sm md:text-base whitespace-nowrap"
     >
-      Begin Your Journey
+      Begin Your Journey & Discover Yourself
     </button>
    </Link>
   </motion.div>
 );
 
 const HomePage = () => {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  
+  // --- Live Onboarding States ---
+  const [onboardingData, setOnboardingData] = useState(null);
+  const [loadingOnboarding, setLoadingOnboarding] = useState(false);
+
   // --- States for Interactive Widgets ---
   
   // 1. Discover Yourself Widget States
@@ -159,6 +167,65 @@ const HomePage = () => {
   const [scanning, setScanning] = useState(false);
   const [scanProgress, setScanProgress] = useState(0);
   const [scanComplete, setScanComplete] = useState(false);
+
+  // Determine onboarding state
+  const isOnboarded = user && (user.profile?.onboarding_completed === true || onboardingData);
+
+  // Fetch live self-discovery results for onboarded users
+  useEffect(() => {
+    const fetchOnboardingResults = async () => {
+      const token = localStorage.getItem('curveurcareer_token');
+      if (!user || !token) {
+        setOnboardingData(null);
+        return;
+      }
+      
+      setLoadingOnboarding(true);
+      try {
+        const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5050';
+        const res = await fetch(`${API_URL}/api/discover/results`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && data.results) {
+            setOnboardingData(data.results);
+            
+            // Set dynamic live metrics based on user performance
+            const baseXP = 500 + (data.results.top_strengths?.length || 0) * 250;
+            setXp(baseXP);
+            setStreak(1); // 1st active day streak since completed today
+            setBadgeUnlocked(true);
+          }
+        }
+      } catch (err) {
+        console.warn('Failed to fetch onboarding results:', err);
+      } finally {
+        setLoadingOnboarding(false);
+      }
+    };
+
+    fetchOnboardingResults();
+  }, [user]);
+
+  // Calculate dynamic heights for weekly analytics graph
+  const getGraphHeights = () => {
+    if (!onboardingData || !onboardingData.completion_timestamp) {
+      return [0, 0, 0, 0, 0, 0, 0];
+    }
+    const date = new Date(onboardingData.completion_timestamp);
+    const dayIndex = date.getDay(); // 0 (Sun) - 6 (Sat)
+    
+    // Map standard week ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+    let mappedIndex = dayIndex - 1;
+    if (mappedIndex < 0) mappedIndex = 6; // Sunday mapped to 6
+
+    const heights = [0, 0, 0, 0, 0, 0, 0];
+    heights[mappedIndex] = 85; // Highlight today's onboarding milestone as 85% analytical intensity
+    return heights;
+  };
 
   // 3. Testimonial State
   const [activeTestimonial, setActiveTestimonial] = useState(0);
@@ -743,67 +810,137 @@ const HomePage = () => {
             subtitle="Click on any metric card to dynamically gain XP. Build consistency and streaks!"
           />
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-            {[
-              { key: 'xp', title: 'Total Experience XP', value: xp, label: 'Click to boost +25', icon: <Trophy className="w-5 h-5 text-amber-400" />, amount: 25, text: "+25 XP Boost!" },
-              { key: 'streak', title: 'Momentum Streak Days', value: streak, label: 'Click to fuel streak', icon: <Flame className="w-5 h-5 text-orange-500 fill-orange-500" />, amount: 1, text: "+1 Day streak fueled! 🔥" },
-              { key: 'badges', title: 'Achievements Unlocked', value: badgeUnlocked ? '24/24' : '23/24', label: 'Finish EQ to unlock 24th', icon: <Sparkles className="w-5 h-5 text-purple-400" />, amount: 0, text: "" },
-              { key: 'courses', title: 'Completed Courses', value: '3/4', label: 'C Programming is active', icon: <BookOpen className="w-5 h-5 text-cyan-400" />, amount: 10, text: "+10 XP Study Bonus!" }
-            ].map(stat => (
-              <motion.div
-                key={stat.key}
-                whileHover={{ scale: 1.03 }}
-                onClick={() => {
-                  if (stat.amount > 0) {
-                    triggerFloatingXP(stat.amount, stat.text);
-                    if (stat.key === 'streak') setStreak(prev => prev + 1);
-                  }
-                }}
-                className="cursor-pointer"
+          <div className="relative">
+            {!isOnboarded && (
+              <div 
+                onClick={() => navigate('/discover-yourself')}
+                className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-slate-950/75 backdrop-blur-md rounded-3xl border border-white/10 p-8 text-center cursor-pointer group/lock transition-all duration-300 hover:bg-slate-950/70"
               >
-                <GlassCard className="p-6 border-white/5 hover:border-cyan-500/30">
-                  <div className="flex justify-between items-center mb-3">
-                    <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">{stat.title}</p>
-                    {stat.icon}
+                <motion.div 
+                  initial={{ scale: 0.9, opacity: 0 }}
+                  whileInView={{ scale: 1, opacity: 1 }}
+                  viewport={{ once: true }}
+                  transition={{ type: 'spring', duration: 0.8 }}
+                  className="max-w-md space-y-6 flex flex-col items-center"
+                >
+                  <div className="relative">
+                    <div className="absolute inset-0 bg-cyan-500/20 blur-xl rounded-full scale-150 animate-pulse" />
+                    <div className="relative w-16 h-16 rounded-2xl bg-slate-900 border border-cyan-500/30 flex items-center justify-center text-cyan-400 shadow-[0_0_20px_rgba(6,182,212,0.15)] group-hover/lock:border-cyan-400 group-hover/lock:shadow-[0_0_30px_rgba(6,182,212,0.3)] transition-all duration-300">
+                      <Lock className="w-8 h-8 animate-bounce" />
+                    </div>
                   </div>
-                  <p className="text-3xl font-black text-white">{stat.value}</p>
-                  <p className="text-[10px] text-cyan-400 font-semibold mt-2 animate-pulse">{stat.label}</p>
-                </GlassCard>
-              </motion.div>
-            ))}
-          </div>
 
-          <div className="grid lg:grid-cols-12 gap-8">
-            
-            {/* Daily Quest Box */}
-          
+                  <div className="space-y-2">
+                    <h4 className="text-2xl font-black bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent uppercase tracking-wider">
+                      Growth Dashboard Encrypted
+                    </h4>
+                    <p className="text-slate-400 text-sm leading-relaxed">
+                      Your gamified active learning analytics, experience XP registers, and neural achievements are locked. Complete the <strong>Discover Yourself</strong> onboarding to unlock your live performance metrics.
+                    </p>
+                  </div>
 
-            {/* Weekly Active Analytics Graph */}
-            <div className="lg:col-span-8">
-              <div className="border border-white/10 bg-slate-900/60 backdrop-blur-md rounded-3xl p-6">
-                <h4 className="text-lg font-black text-white mb-4">Weekly Learning Analytics</h4>
-                <div className="grid grid-cols-7 gap-3 pt-4 mx-7">
-                  {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day, idx) => {
-                    const heights = [45, 68, 55, 78, 62, 85, 92];
-                    return (
-                      <div key={idx} className="text-center flex flex-col justify-end items-center h-48">
-                        <div className="flex-1 w-full flex items-end justify-center">
-                          <motion.div
-                            initial={{ height: 0 }}
-                            whileInView={{ height: `${heights[idx]}%` }}
-                            transition={{ delay: idx * 0.05, duration: 1 }}
-                            viewport={{ once: true }}
-                            className={`w-6 sm:w-8 rounded-t-lg bg-gradient-to-t ${idx === 6 ? 'from-orange-500 to-amber-400 shadow-md shadow-orange-500/20' : 'from-blue-600 to-cyan-500'}`}
-                          />
-                        </div>
-                        <p className="text-xs text-slate-400 mt-3 font-semibold">{day}</p>
+                  <button className="h-12 px-8 bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-bold rounded-xl shadow-lg shadow-cyan-500/20 hover:shadow-cyan-500/45 hover:scale-105 active:scale-95 transition-all duration-300 flex items-center gap-2">
+                    <Zap className="w-4 h-4 fill-white animate-pulse" />
+                    Activate Growth Dashboard
+                  </button>
+                </motion.div>
+              </div>
+            )}
+
+            <div className={`transition-all duration-500 ${!isOnboarded ? 'blur-md opacity-25 pointer-events-none select-none' : ''}`}>
+              <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+                {[
+                  { 
+                    key: 'xp', 
+                    title: 'Total Experience XP', 
+                    value: isOnboarded ? xp : '----', 
+                    label: isOnboarded ? 'Click to boost +25' : 'Unlock via self-discovery', 
+                    icon: <Trophy className={`w-5 h-5 ${isOnboarded ? 'text-amber-400' : 'text-slate-500'}`} />, 
+                    amount: isOnboarded ? 25 : 0, 
+                    text: "+25 XP Boost!" 
+                  },
+                  { 
+                    key: 'streak', 
+                    title: 'Momentum Streak Days', 
+                    value: isOnboarded ? streak : '--', 
+                    label: isOnboarded ? 'Click to fuel streak' : 'Unlock via self-discovery', 
+                    icon: <Flame className={`w-5 h-5 ${isOnboarded ? 'text-orange-500 fill-orange-500' : 'text-slate-500'}`} />, 
+                    amount: isOnboarded ? 1 : 0, 
+                    text: "+1 Day streak fueled! 🔥" 
+                  },
+                  { 
+                    key: 'badges', 
+                    title: 'Achievements Unlocked', 
+                    value: isOnboarded && onboardingData ? `${(onboardingData.top_strengths?.length || 0)}/10` : '--/--', 
+                    label: isOnboarded ? 'Complete more challenges' : 'Unlock via self-discovery', 
+                    icon: <Sparkles className={`w-5 h-5 ${isOnboarded ? 'text-purple-400' : 'text-slate-500'}`} />, 
+                    amount: 0, 
+                    text: "" 
+                  },
+                  { 
+                    key: 'courses', 
+                    title: 'Completed Courses', 
+                    value: isOnboarded ? '0/4' : '--/--', 
+                    label: isOnboarded ? 'Start your first course!' : 'Unlock via self-discovery', 
+                    icon: <BookOpen className={`w-5 h-5 ${isOnboarded ? 'text-cyan-400' : 'text-slate-500'}`} />, 
+                    amount: isOnboarded ? 10 : 0, 
+                    text: "+10 XP Study Bonus!" 
+                  }
+                ].map(stat => (
+                  <motion.div
+                    key={stat.key}
+                    whileHover={isOnboarded ? { scale: 1.03 } : {}}
+                    onClick={() => {
+                      if (isOnboarded && stat.amount > 0) {
+                        triggerFloatingXP(stat.amount, stat.text);
+                        if (stat.key === 'streak') setStreak(prev => prev + 1);
+                      }
+                    }}
+                    className={isOnboarded ? 'cursor-pointer' : ''}
+                  >
+                    <GlassCard className={`p-6 border-white/5 ${isOnboarded ? 'hover:border-cyan-500/30' : ''}`}>
+                      <div className="flex justify-between items-center mb-3">
+                        <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">{stat.title}</p>
+                        {stat.icon}
                       </div>
-                    );
-                  })}
+                      <p className="text-3xl font-black text-white">{stat.value}</p>
+                      <p className="text-[10px] text-cyan-400 font-semibold mt-2 animate-pulse">{stat.label}</p>
+                    </GlassCard>
+                  </motion.div>
+                ))}
+              </div>
+
+              <div className="grid lg:grid-cols-12 gap-8">
+                
+                {/* Weekly Active Analytics Graph */}
+                <div className="lg:col-span-8">
+                  <div className="border border-white/10 bg-slate-900/60 backdrop-blur-md rounded-3xl p-6">
+                    <h4 className="text-lg font-black text-white mb-4">Weekly Learning Analytics</h4>
+                    <div className="grid grid-cols-7 gap-3 pt-4 mx-7">
+                      {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day, idx) => {
+                        const heights = isOnboarded ? getGraphHeights() : [0, 0, 0, 0, 0, 0, 0];
+                        const isTodayActive = isOnboarded && heights[idx] > 0;
+                        return (
+                          <div key={idx} className="text-center flex flex-col justify-end items-center h-48">
+                            <div className="flex-1 w-full flex items-end justify-center">
+                              <motion.div
+                                initial={{ height: 0 }}
+                                whileInView={{ height: `${heights[idx]}%` }}
+                                transition={{ delay: idx * 0.05, duration: 1 }}
+                                viewport={{ once: true }}
+                                className={`w-6 sm:w-8 rounded-t-lg bg-gradient-to-t ${isTodayActive ? 'from-orange-500 to-amber-400 shadow-md shadow-orange-500/20' : 'from-blue-600 to-cyan-500'}`}
+                              />
+                            </div>
+                            <p className="text-xs text-slate-400 mt-3 font-semibold">{day}</p>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
                 </div>
+
               </div>
             </div>
-
           </div>
         </div>
       </section>
@@ -986,7 +1123,7 @@ const HomePage = () => {
               <h4 className="font-bold text-white mb-4 text-sm tracking-wider uppercase">Platform</h4>
               <ul className="space-y-2 text-xs">
                 <li><a href="/" className="hover:text-cyan-400 transition-colors">Home</a></li>
-                <li><a href="/assessment" className="hover:text-cyan-400 transition-colors font-semibold">Explore Skills</a></li>
+                <li><a href="/discover-yourself" className="hover:text-cyan-400 transition-colors font-semibold">Explore Skills</a></li>
                 <li><a href="/learning" className="hover:text-cyan-400 transition-colors">Learning Paths</a></li>
                 <li><a href="/#discover-yourself" className="hover:text-cyan-400 transition-colors">Discover Yourself</a></li>
                 <li><a href="/#skill-gap" className="hover:text-cyan-400 transition-colors">Skill Gap Analyzer</a></li>

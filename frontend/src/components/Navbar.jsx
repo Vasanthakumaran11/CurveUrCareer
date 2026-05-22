@@ -12,6 +12,7 @@ const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [showOnboardingAlert, setShowOnboardingAlert] = useState(false);
   const navigate = useNavigate();
 
   const handleLogout = async () => {
@@ -29,15 +30,17 @@ const Navbar = () => {
     return <User className="w-5 h-5" />;
   };
 
+  const isOnboarded = user && user.profile?.onboarding_completed === true;
+
   const navLinks = [
     { name: t('navbar.home'), path: '/' },
     { name: t('navbar.exploreSkills'), path: '/#explore-skills' },
     { name: t('navbar.learningPaths'), path: '/learning' },
-    { name: t('navbar.discoverYourself'), path: '/assessment' },
-    { name: t('navbar.careerDirection'), path: '/#career-direction' },
-    { name: t('navbar.skillGapAnalyzer'), path: '/#skill-gap' },
-    { name: t('navbar.growthDashboard'), path: '/#growth-dashboard' },
-    { name: t('navbar.colleges'), path: '/#colleges' },
+    { name: t('navbar.discoverYourself'), path: '/discover-yourself' },
+    { name: t('navbar.careerDirection'), path: isOnboarded ? '/results#pathways' : '/#career-direction' },
+    { name: t('navbar.skillGapAnalyzer'), path: isOnboarded ? '/#skill-gap' : '/results#skill-gap' },
+    { name: t('navbar.growthDashboard'), path: isOnboarded ? '/#growth-dashboard' : '/results#growth-dashboard' },
+    { name: t('navbar.colleges'), path: isOnboarded ? '/results#colleges' : '/#colleges' },
     { name: t('navbar.about'), path: '/about' },
   ];
 
@@ -58,15 +61,26 @@ const Navbar = () => {
         
         {/* Desktop Navigation */}
         <div className="hidden xl:flex items-center gap-5">
-          {navLinks.map((link) => (
-            <Link 
-              key={link.path} 
-              to={link.path} 
-              className="text-xs lg:text-sm font-semibold text-slate-600 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors whitespace-nowrap"
-            >
-              {link.name}
-            </Link>
-          ))}
+          {navLinks.map((link) => {
+            const requiresOnboarding = link.path.startsWith('/learning') || link.path.includes('#growth-dashboard') || link.path.startsWith('/results');
+            const hasNotCompleted = user && !user.profile?.onboarding_completed;
+
+            return (
+              <Link 
+                key={link.path} 
+                to={requiresOnboarding && hasNotCompleted ? '#' : link.path}
+                onClick={(e) => {
+                  if (requiresOnboarding && hasNotCompleted) {
+                    e.preventDefault();
+                    setShowOnboardingAlert(true);
+                  }
+                }}
+                className="text-xs lg:text-sm font-semibold text-slate-600 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors whitespace-nowrap"
+              >
+                {link.name}
+              </Link>
+            );
+          })}
         </div>
 
         {/* User Actions */}
@@ -158,16 +172,27 @@ const Navbar = () => {
               className="fixed top-0 right-0 bottom-0 w-3/4 max-w-sm bg-white dark:bg-slate-900 z-[60] shadow-2xl p-6 xl:hidden flex flex-col pt-20 overflow-y-auto"
             >
               <div className="space-y-6">
-                {navLinks.map((link) => (
-                  <Link 
-                    key={link.path} 
-                    to={link.path} 
-                    onClick={() => setIsMenuOpen(false)}
-                    className="block text-xl font-bold text-slate-800 dark:text-white"
-                  >
-                    {link.name}
-                  </Link>
-                ))}
+                {navLinks.map((link) => {
+                  const requiresOnboarding = link.path.startsWith('/learning') || link.path.includes('#growth-dashboard') || link.path.startsWith('/results');
+                  const hasNotCompleted = user && !user.profile?.onboarding_completed;
+
+                  return (
+                    <Link 
+                      key={link.path} 
+                      to={requiresOnboarding && hasNotCompleted ? '#' : link.path} 
+                      onClick={(e) => {
+                        setIsMenuOpen(false);
+                        if (requiresOnboarding && hasNotCompleted) {
+                          e.preventDefault();
+                          setShowOnboardingAlert(true);
+                        }
+                      }}
+                      className="block text-xl font-bold text-slate-800 dark:text-white"
+                    >
+                      {link.name}
+                    </Link>
+                  );
+                })}
                 {!user && (
                   <Link 
                     to="/signup" 
@@ -183,8 +208,70 @@ const Navbar = () => {
         )}
       </AnimatePresence>
 
-      {/* Settings Modal */}
+       {/* Settings Modal */}
       <SettingsModal isVisible={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
+
+      {/* Futuristic Onboarding Intercept Alert Modal */}
+      <AnimatePresence>
+        {showOnboardingAlert && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            {/* Backdrop */}
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowOnboardingAlert(false)}
+              className="absolute inset-0 bg-slate-950/80 backdrop-blur-md"
+            />
+            
+            {/* Modal Box */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="bg-slate-900 border border-slate-800 rounded-2xl p-6 md:p-8 max-w-md w-full relative z-10 shadow-2xl text-center space-y-6 overflow-hidden"
+            >
+              {/* Dynamic decorative backdrop grid */}
+              <div className="absolute inset-0 bg-[linear-gradient(to_right,#1e293b_1px,transparent_1px),linear-gradient(to_bottom,#1e293b_1px,transparent_1px)] bg-[size:1.5rem_1.5rem] opacity-20 pointer-events-none"></div>
+
+              {/* Glowing warning icon */}
+              <div className="relative flex justify-center">
+                <div className="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 text-3xl shadow-[0_0_20px_rgba(245,158,11,0.25)] animate-pulse">
+                  ⚠️
+                </div>
+              </div>
+
+              <div className="space-y-2 relative z-10">
+                <h3 className="text-xl md:text-2xl font-black text-slate-100 bg-gradient-to-r from-amber-400 to-orange-400 bg-clip-text text-transparent uppercase tracking-wider">
+                  Discovery Link Required
+                </h3>
+                <p className="text-slate-400 text-xs md:text-sm leading-relaxed">
+                  Before you can access the learning pathways, skill diagnostic suites, and personalized career dashboards, you must activate your student neural coordinates.
+                </p>
+              </div>
+
+              {/* Actions */}
+              <div className="flex flex-col sm:flex-row gap-3 relative z-10 pt-2">
+                <button
+                  onClick={() => setShowOnboardingAlert(false)}
+                  className="w-full sm:flex-1 py-3 rounded-xl border border-slate-800 hover:bg-slate-800/50 text-slate-400 text-sm font-semibold transition-colors duration-300"
+                >
+                  Cancel Connection
+                </button>
+                <button
+                  onClick={() => {
+                    setShowOnboardingAlert(false);
+                    navigate('/discover-yourself');
+                  }}
+                  className="w-full sm:flex-1 py-3 rounded-xl bg-gradient-to-r from-cyan-400 to-blue-500 hover:from-cyan-300 hover:to-blue-400 text-slate-950 text-sm font-bold shadow-[0_0_20px_rgba(34,211,238,0.25)] hover:shadow-[0_0_30px_rgba(34,211,238,0.4)] transition-all duration-300 transform hover:-translate-y-0.5"
+                >
+                  Start Discovery Link
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </>
   );
 };

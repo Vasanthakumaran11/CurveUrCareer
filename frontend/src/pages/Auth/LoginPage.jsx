@@ -27,7 +27,7 @@ const LoginPage = () => {
       setError('');
       setLoading(true);
       await login(email, password);
-      navigate('/learning');
+      navigate('/');
     } catch (err) {
       setError(err.message || 'Failed to log in. Please check your credentials.');
     }
@@ -39,7 +39,7 @@ const LoginPage = () => {
       setError('');
       setLoading(true);
       await loginWithGoogle();
-      navigate('/learning');
+      navigate('/');
     } catch (err) {
       setError(err.message || 'Failed to log in with Google.');
     }

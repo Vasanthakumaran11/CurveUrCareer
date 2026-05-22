@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import authRoutes from './routes/auth.js';
+import discoverRoutes from './routes/discover.js';
 
 // Load config
 dotenv.config();
@@ -28,8 +29,9 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Register Authentication Routing Layer
+// Register Authentication & Discovery Routing Layers
 app.use('/api/auth', authRoutes);
+app.use('/api/discover', discoverRoutes);
 
 // Fallback Route Handler (404)
 app.use((req, res, next) => {

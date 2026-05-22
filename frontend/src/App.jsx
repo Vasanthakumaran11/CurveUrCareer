@@ -5,6 +5,7 @@ import { AuthProvider } from './contexts/AuthProvider';
 import { SettingsProvider } from './contexts/SettingsProvider';
 import Navbar from './components/Navbar';
 import ProtectedRoute from './components/ProtectedRoute';
+import ErrorBoundary from './components/ErrorBoundary';
 
 const HomePage = lazy(() => import('./pages/HomePage'));
 const AssessmentPage = lazy(() => import('./pages/AssessmentPage'));
@@ -55,7 +56,7 @@ const MainContent = () => {
   const location = useLocation();
   
   // Hide Navbar on assessment and auth pages for total immersion
-  const hideNavbar = ['/assessment', '/login', '/signup'].includes(location.pathname);
+  const hideNavbar = ['/discover-yourself', '/login', '/signup'].includes(location.pathname);
 
   return (
     <div className="min-h-screen flex flex-col bg-white dark:bg-slate-950 transition-colors duration-300">
@@ -63,8 +64,16 @@ const MainContent = () => {
       <div className="flex-1">
         <Routes>
           <Route path="/" element={<HomePage />} />
-          <Route path="/assessment" element={<AssessmentPage />} />
-          <Route path="/results" element={<ResultsPage />} />
+          <Route path="/discover-yourself" element={
+            <ProtectedRoute>
+              <AssessmentPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/results" element={
+            <ProtectedRoute>
+              <ResultsPage />
+            </ProtectedRoute>
+          } />
           <Route path="/about" element={<AboutPage />} />
           
           {/* Authentication Routes */}
@@ -96,9 +105,11 @@ function App() {
           <Router>
             <ScrollToHash />
             <InitialRedirect />
-            <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-slate-500">Loading…</div>}>
-              <MainContent />
-            </Suspense>
+            <ErrorBoundary>
+              <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-slate-500">Loading…</div>}>
+                <MainContent />
+              </Suspense>
+            </ErrorBoundary>
           </Router>
         </FormDataProvider>
       </AuthProvider>

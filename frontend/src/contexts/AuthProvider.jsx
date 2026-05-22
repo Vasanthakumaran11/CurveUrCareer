@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { AuthContext } from './AuthContext';
+import { authService } from '../services/authService';
 
-const API_BASE = 'http://localhost:5050/api/auth';
 const USER_STORAGE_KEY = 'curveurcareer_user';
 const TOKEN_STORAGE_KEY = 'curveurcareer_token';
 
@@ -26,70 +26,121 @@ const clearSession = () => {
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(readStoredUser());
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  // ── INITIALIZATION ──────────────────────────────────────────
+  React.useEffect(() => {
+    const initializeAuth = async () => {
+      const token = localStorage.getItem(TOKEN_STORAGE_KEY);
+      const storedUser = readStoredUser();
+      
+      if (token && storedUser) {
+        try {
+          const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5050';
+          const res = await fetch(`${API_URL}/api/auth/profile`, {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+          if (res.ok) {
+            const data = await res.json();
+            if (data.success && data.user) {
+              const freshUser = {
+                uid: data.user.id || storedUser.uid,
+                email: data.user.email,
+                displayName: data.user.user_metadata?.username || data.user.profile?.username || storedUser.displayName,
+                profile: data.user.profile || null
+              };
+              saveSession(freshUser, token);
+              setUser(freshUser);
+            }
+          } else {
+            // Session expired
+            clearSession();
+            setUser(null);
+          }
+        } catch (err) {
+          console.warn('Auth check warning (possibly offline):', err);
+        }
+      } else {
+        // No session stored
+        setUser(null);
+      }
+      setLoading(false);
+    };
+
+    initializeAuth();
+  }, []);
+
+  // ── REFRESH PROFILE ─────────────────────────────────────────
+  const refreshProfile = async () => {
+    const token = localStorage.getItem(TOKEN_STORAGE_KEY);
+    if (!token) return null;
+    
+    try {
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5050';
+      const res = await fetch(`${API_URL}/api/auth/profile`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.user) {
+          const freshUser = {
+            uid: data.user.id || user?.uid,
+            email: data.user.email || user?.email,
+            displayName: data.user.user_metadata?.username || data.user.profile?.username || user?.displayName,
+            profile: data.user.profile || null
+          };
+          saveSession(freshUser, token);
+          setUser(freshUser);
+          return freshUser;
+        }
+      }
+    } catch (err) {
+      console.error('Failed to refresh profile:', err);
+    }
+    return null;
+  };
 
   // ── SIGNUP ──────────────────────────────────────────────────
   const signup = async (email, password, displayName) => {
     if (!email || !password) throw new Error('Email and password are required.');
 
-    try {
-      const res = await fetch(`${API_BASE}/signup`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password, displayName }),
-      });
-      const data = await res.json();
+    const data = await authService.signup(email, password, displayName);
 
-      if (!res.ok) throw new Error(data.error || 'Signup failed.');
-
-      const newUser = {
-        uid: data.user?.id || Date.now().toString(),
-        email: data.user?.email || email,
-        displayName: displayName || email.split('@')[0],
-      };
-      saveSession(newUser, data.session?.access_token || null);
-      setUser(newUser);
-      return { user: newUser };
-    } catch (err) {
-      // Fallback: local signup if backend unavailable
-      if (err.message.includes('Failed to fetch')) {
-        return _localSignup(email, password, displayName);
-      }
-      throw err;
-    }
+    const newUser = {
+      uid: data.user?.id || Date.now().toString(),
+      email: data.user?.email || email,
+      displayName: data.user?.user_metadata?.username || displayName || email.split('@')[0],
+      profile: data.user?.profile || null
+    };
+    const token = data.session?.access_token || null;
+    saveSession(newUser, token);
+    setUser(newUser);
+    return { user: newUser };
   };
 
   // ── LOGIN ───────────────────────────────────────────────────
   const login = async (email, password) => {
     if (!email || !password) throw new Error('Email and password are required.');
 
-    try {
-      const res = await fetch(`${API_BASE}/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      });
-      const data = await res.json();
+    const data = await authService.login(email, password);
 
-      if (!res.ok) throw new Error(data.error || 'Invalid email or password.');
-
-      const loggedUser = {
-        uid: data.user?.id || Date.now().toString(),
-        email: data.user?.email || email,
-        displayName: data.user?.user_metadata?.displayName || email.split('@')[0],
-      };
-      saveSession(loggedUser, data.session?.access_token || null);
-      setUser(loggedUser);
-      return { user: loggedUser };
-    } catch (err) {
-      if (err.message.includes('Failed to fetch')) {
-        return _localLogin(email, password);
-      }
-      throw err;
-    }
+    const loggedUser = {
+      uid: data.user?.id || Date.now().toString(),
+      email: data.user?.email || email,
+      displayName: data.user?.user_metadata?.username || data.user?.user_metadata?.display_name || email.split('@')[0],
+      profile: data.user?.profile || null
+    };
+    const token = data.session?.access_token || null;
+    saveSession(loggedUser, token);
+    setUser(loggedUser);
+    return { user: loggedUser };
   };
 
-  // ── GOOGLE LOGIN (simulated prompt — no real OAuth without redirect) ──
+  // ── GOOGLE LOGIN (simulated) ───────────────────────────────
   const loginWithGoogle = async () => {
     const email = window.prompt('Enter your Gmail address to sign in with Google:', 'you@gmail.com');
     if (email === null) throw new Error('Google sign-in cancelled.');
@@ -102,6 +153,9 @@ export const AuthProvider = ({ children }) => {
       uid: `google-${Date.now()}`,
       email: gmail,
       displayName: name.charAt(0).toUpperCase() + name.slice(1),
+      profile: {
+        onboarding_completed: false
+      }
     };
     saveSession(googleUser, null);
     setUser(googleUser);
@@ -113,46 +167,17 @@ export const AuthProvider = ({ children }) => {
     const token = localStorage.getItem(TOKEN_STORAGE_KEY);
     try {
       if (token) {
-        await fetch(`${API_BASE}/logout`, {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        await authService.logout(token);
       }
-    } catch (_) {
-      // silent — still clear session locally
+    } catch {
+      // silent fail
     }
     clearSession();
     setUser(null);
     return { success: true };
   };
 
-  // ── LOCAL FALLBACKS (when backend is offline) ────────────────
-  const _localSignup = (email, password, displayName) => {
-    const USERS_KEY = 'curveurcareer_users';
-    let users = [];
-    try { users = JSON.parse(localStorage.getItem(USERS_KEY) || '[]'); } catch {}
-    if (users.some((u) => u.email === email)) throw new Error('An account with this email already exists.');
-    const newUser = { uid: Date.now().toString(), email, displayName: displayName || email.split('@')[0], password };
-    localStorage.setItem(USERS_KEY, JSON.stringify([...users, newUser]));
-    const { password: _, ...safeUser } = newUser;
-    saveSession(safeUser, null);
-    setUser(safeUser);
-    return { user: safeUser };
-  };
-
-  const _localLogin = (email, password) => {
-    const USERS_KEY = 'curveurcareer_users';
-    let users = [];
-    try { users = JSON.parse(localStorage.getItem(USERS_KEY) || '[]'); } catch {}
-    const matched = users.find((u) => u.email === email && u.password === password);
-    if (!matched) throw new Error('Invalid email or password.');
-    const { password: _, ...safeUser } = matched;
-    saveSession(safeUser, null);
-    setUser(safeUser);
-    return { user: safeUser };
-  };
-
-  const value = { user, signup, login, loginWithGoogle, logout, loading };
+  const value = { user, signup, login, loginWithGoogle, logout, loading, refreshProfile };
 
   return (
     <AuthContext.Provider value={value}>

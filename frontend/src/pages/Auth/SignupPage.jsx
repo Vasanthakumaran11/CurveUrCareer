@@ -28,7 +28,7 @@ const SignupPage = () => {
       setError('');
       setLoading(true);
       await signup(email, password, name);
-      navigate('/learning');
+      navigate('/');
     } catch (err) {
       setError('Failed to create an account. ' + (err.message || ''));
     }
@@ -40,7 +40,7 @@ const SignupPage = () => {
       setError('');
       setLoading(true);
       await loginWithGoogle();
-      navigate('/learning');
+      navigate('/');
     } catch (err) {
       setError(err.message || 'Failed to sign up with Google.');
     }
