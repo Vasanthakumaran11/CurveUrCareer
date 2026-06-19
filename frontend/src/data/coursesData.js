@@ -1,5 +1,101 @@
 // Comprehensive course data for career guidance
 export const coursesData = [
+  // Core Coding Courses
+  {
+    id: 'python',
+    name: 'Python Programming',
+    stream: 'Science',
+    duration: '8 weeks',
+    eligibility: {
+      subjects: ['Any'],
+      minPercentage: 0,
+      entranceExams: ['None']
+    },
+    description: 'Master pythonic coding, structured problem solving, and foundation tools for scripting and basic AI.',
+    careerPaths: ['Software Engineer', 'Data Scientist', 'Automation Engineer'],
+    averageSalary: '6-12 LPA',
+    topColleges: ['Online Self-Paced', 'Coursera', 'edX'],
+    interests: ['Technology', 'Programming', 'AI'],
+    skills: ['Python', 'Coding', 'Logic'],
+    workEnvironment: 'Remote/Office',
+    futureScope: 'Excellent - standard for AI and automation'
+  },
+  {
+    id: 'c',
+    name: 'C Programming Core',
+    stream: 'Science',
+    duration: '10 weeks',
+    eligibility: {
+      subjects: ['Any'],
+      minPercentage: 0,
+      entranceExams: ['None']
+    },
+    description: 'Understand low-level registers, compiler execution, system variables, pointers, and memory manipulation.',
+    careerPaths: ['Systems Programmer', 'Embedded Engineer', 'Game Developer'],
+    averageSalary: '5-10 LPA',
+    topColleges: ['Online Self-Paced', 'NPTEL', 'Standard Textbooks'],
+    interests: ['Technology', 'Embedded Systems', 'Pointers'],
+    skills: ['C Programming', 'Memory Management', 'Logic'],
+    workEnvironment: 'R&D Labs/Office',
+    futureScope: 'Very Good - core of hardware/systems programming'
+  },
+  {
+    id: 'cplusplus',
+    name: 'C++ Object Oriented Programming',
+    stream: 'Science',
+    duration: '10 weeks',
+    eligibility: {
+      subjects: ['Any'],
+      minPercentage: 0,
+      entranceExams: ['None']
+    },
+    description: 'Master Object Oriented Programming principles, classes, templates, STL, and memory management in C++.',
+    careerPaths: ['Software Engineer', 'Game Developer', 'High-Frequency Trader'],
+    averageSalary: '8-18 LPA',
+    topColleges: ['Online Self-Paced', 'Codecademy', 'Udemy'],
+    interests: ['Programming', 'Game Dev', 'Performance Optimization'],
+    skills: ['C++', 'OOP', 'STL'],
+    workEnvironment: 'Corporate/Office/Remote',
+    futureScope: 'Excellent - gold standard for performance critical code'
+  },
+  {
+    id: 'java',
+    name: 'Java Development',
+    stream: 'Science',
+    duration: '12 weeks',
+    eligibility: {
+      subjects: ['Any'],
+      minPercentage: 0,
+      entranceExams: ['None']
+    },
+    description: 'Build robust, object-oriented, clean enterprise software structures using Java classes and design patterns.',
+    careerPaths: ['Java Backend Developer', 'Enterprise Architect', 'Android Developer'],
+    averageSalary: '6-15 LPA',
+    topColleges: ['Online Self-Paced', 'Oracle Academy', 'Coursera'],
+    interests: ['Programming', 'Enterprise Software', 'Android'],
+    skills: ['Java', 'OOP', 'Design Patterns'],
+    workEnvironment: 'Corporate/Remote',
+    futureScope: 'Very Good - backbone of corporate backends'
+  },
+  {
+    id: 'mysql',
+    name: 'MySQL Databases',
+    stream: 'Science',
+    duration: '6 weeks',
+    eligibility: {
+      subjects: ['Any'],
+      minPercentage: 0,
+      entranceExams: ['None']
+    },
+    description: 'Design relational tables, handle keys, optimize execution queries, and master join statements.',
+    careerPaths: ['Database Administrator', 'Data Analyst', 'Backend Developer'],
+    averageSalary: '5-12 LPA',
+    topColleges: ['Online Self-Paced', 'MySQL official docs', 'Udacity'],
+    interests: ['Databases', 'Data Modeling', 'Queries'],
+    skills: ['SQL', 'MySQL', 'Database Design'],
+    workEnvironment: 'Office/Remote',
+    futureScope: 'Excellent - database knowledge is essential'
+  },
   // Science Stream
   // Science Stream - Engineering Branches
   {

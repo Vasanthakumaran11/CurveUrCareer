@@ -62,7 +62,7 @@ const Navbar = () => {
         {/* Desktop Navigation */}
         <div className="hidden xl:flex items-center gap-5">
           {navLinks.map((link) => {
-            const requiresOnboarding = link.path.startsWith('/learning') || link.path.includes('#growth-dashboard') || link.path.startsWith('/results');
+            const requiresOnboarding = link.path.includes('#growth-dashboard') || link.path.startsWith('/results');
             const hasNotCompleted = user && !user.profile?.onboarding_completed;
 
             return (
@@ -173,7 +173,7 @@ const Navbar = () => {
             >
               <div className="space-y-6">
                 {navLinks.map((link) => {
-                  const requiresOnboarding = link.path.startsWith('/learning') || link.path.includes('#growth-dashboard') || link.path.startsWith('/results');
+                  const requiresOnboarding = link.path.includes('#growth-dashboard') || link.path.startsWith('/results');
                   const hasNotCompleted = user && !user.profile?.onboarding_completed;
 
                   return (

@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Linkedin, Mail, Sparkles, Trophy, Flame, Target, BookOpen, Compass, Shield, CheckCircle2, AlertTriangle, Play, ChevronRight, Zap, Lock } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
+import { coursesData } from '../data/coursesData';
 
 // Animated Particle Background
 const FloatingParticles = () => {
@@ -154,6 +155,20 @@ const HomePage = () => {
   const [onboardingData, setOnboardingData] = useState(null);
   const [loadingOnboarding, setLoadingOnboarding] = useState(false);
 
+  // --- Course Progress Tracking State ---
+  const [courseProgress, setCourseProgress] = useState({});
+
+  useEffect(() => {
+    const saved = localStorage.getItem('curveurcareer_course_progress');
+    if (saved) {
+      try {
+        setCourseProgress(JSON.parse(saved));
+      } catch (e) {
+        console.error("Failed to parse course progress", e);
+      }
+    }
+  }, []);
+
   // --- States for Interactive Widgets ---
   
   // 1. Discover Yourself Widget States
@@ -167,6 +182,96 @@ const HomePage = () => {
   const [scanning, setScanning] = useState(false);
   const [scanProgress, setScanProgress] = useState(0);
   const [scanComplete, setScanComplete] = useState(false);
+
+  // Resume Upload and Dynamic Parser States
+  const [resumeText, setResumeText] = useState('');
+  const [resumeFileName, setResumeFileName] = useState('');
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadError, setUploadError] = useState('');
+  const [uploadingResume, setUploadingResume] = useState(false);
+  const [inputMode, setInputMode] = useState('upload'); // 'upload' or 'text'
+  const [gapReport, setGapReport] = useState(null);
+
+  const roleRequiredSkills = {
+    'Full-Stack Developer': [
+      'HTML', 'CSS', 'JavaScript', 'React', 'Node.js', 'Express', 'MySQL', 'Python', 'C Programming', 'Pointers & Memory', 'OOP', 'Java'
+    ],
+    'Data Scientist': [
+      'Python', 'SQL', 'MySQL', 'Statistics', 'Machine Learning', 'Data Pipeline', 'R Programming', 'Data Analytics', 'Excel'
+    ],
+    'AI Researcher': [
+      'Python', 'Machine Learning', 'AI', 'Neural Architectures', 'C Programming', 'Calculus', 'Pointers', 'OOP', 'Java'
+    ]
+  };
+
+  const handleFileUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setResumeFileName(file.name);
+    setUploadError('');
+    setUploadingResume(true);
+    setUploadProgress(10);
+
+    try {
+      if (file.type === 'text/plain') {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          setResumeText(event.target.result || '');
+          setUploadProgress(100);
+          setUploadingResume(false);
+        };
+        reader.onerror = () => {
+          setUploadError('Failed to read text file.');
+          setUploadingResume(false);
+        };
+        reader.readAsText(file);
+      } else if (file.type === 'application/pdf') {
+        setUploadProgress(30);
+        const reader = new FileReader();
+        reader.onload = async (event) => {
+          try {
+            const typedarray = new Uint8Array(event.target.result);
+            setUploadProgress(50);
+            
+            // Load pdf.js dynamically if not available
+            if (!window.pdfjsLib) {
+              const script = document.createElement('script');
+              script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js';
+              document.head.appendChild(script);
+              await new Promise((resolve) => {
+                script.onload = () => resolve();
+              });
+            }
+            window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+            
+            const pdf = await window.pdfjsLib.getDocument({ data: typedarray }).promise;
+            setUploadProgress(70);
+            let text = '';
+            for (let i = 1; i <= pdf.numPages; i++) {
+              const page = await pdf.getPage(i);
+              const textContent = await page.getTextContent();
+              text += textContent.items.map(item => item.str).join(' ') + '\n';
+            }
+            setResumeText(text);
+            setUploadProgress(100);
+            setUploadingResume(false);
+          } catch (err) {
+            console.error(err);
+            setUploadError('Failed to extract text from PDF. Try copy-pasting your text below.');
+            setUploadingResume(false);
+          }
+        };
+        reader.readAsArrayBuffer(file);
+      } else {
+        setUploadError('Unsupported file type. Please upload a .txt or .pdf file.');
+        setUploadingResume(false);
+      }
+    } catch (err) {
+      setUploadError('Error processing file.');
+      setUploadingResume(false);
+    }
+  };
 
   // Determine onboarding state
   const isOnboarded = user && (user.profile?.onboarding_completed === true || onboardingData);
@@ -240,30 +345,13 @@ const HomePage = () => {
     }, 1500);
   };
 
-  // Skill Gap Analysis simulated database
-  const roleGapData = {
-    'Full-Stack Developer': {
-      match: 68,
-      missing: ['Pointers & Memory Core (C)', 'Relational Database Indexing (MySQL)', 'Concurrency & OOP (Java)'],
-      present: ['HTML/CSS Layouts', 'Python Core Fundamentals', 'Basic JavaScript Scripting'],
-      recommendation: 'Master Low-level operations in C Core & optimize indices in MySQL Databases to raise your match score by 22%!'
-    },
-    'Data Scientist': {
-      match: 74,
-      missing: ['Advanced Relational SQL (MySQL)', 'Statistical Modeling (Python)', 'Data Pipeline Integration'],
-      present: ['Python Core Syntax', 'Excel Sheets & Math Basics', 'Analytical Reasoning'],
-      recommendation: 'Master MySQL Databases and Python Data modules to close your gap!'
-    },
-    'AI Researcher': {
-      match: 52,
-      missing: ['Low-level Memory Optimization (C)', 'Neural Architectures', 'Object-Oriented structures (Java)'],
-      present: ['Python Programming', 'High school Calculus', 'Basic scripting'],
-      recommendation: 'Enroll in C Programming Core to understand hardware execution, and study Java for large-scale architectures.'
-    }
-  };
-
-  // Run Gap Scanner simulation
+  // Run Gap Scanner using parsed resume text
   const handleRunScan = () => {
+    if (!resumeText.trim()) {
+      setUploadError('Please upload a resume file or paste your text first!');
+      return;
+    }
+    setUploadError('');
     setScanning(true);
     setScanProgress(0);
     setScanComplete(false);
@@ -277,6 +365,47 @@ const HomePage = () => {
           if (prev >= 100) {
             clearInterval(timer);
             setScanning(false);
+            
+            // Compute real skill gap analysis based on resumeText
+            const required = roleRequiredSkills[selectedRole] || [];
+            const textToSearch = resumeText.toLowerCase();
+            const present = [];
+            const missing = [];
+            
+            required.forEach(skill => {
+              // Extract main keywords for matching (e.g. "C Programming" -> "c", "React" -> "react")
+              let keyword = skill.toLowerCase();
+              if (keyword === 'pointers & memory') keyword = 'pointer';
+              else if (keyword === 'c programming') keyword = ' c '; // avoid matching inside words
+              else if (keyword === 'oop') keyword = 'object';
+              
+              const isPresent = textToSearch.includes(keyword) || 
+                                (keyword === ' c ' && (textToSearch.includes('\nc\n') || textToSearch.startsWith('c ') || textToSearch.includes(' c,')));
+                                
+              if (isPresent) {
+                present.push(skill);
+              } else {
+                missing.push(skill);
+              }
+            });
+
+            // If nothing matched, but we have text, keep it authentic or give default if very empty
+            const matchScore = Math.max(0, Math.round((present.length / required.length) * 100));
+            
+            let recommendation = '';
+            if (missing.length > 0) {
+              recommendation = `Master ${missing.slice(0, 2).join(' & ')} to raise your match score by ${Math.round((missing.slice(0, 2).length / required.length) * 100)}%!`;
+            } else {
+              recommendation = `Excellent! Your resume covers all required skills for ${selectedRole}. You are industry-ready!`;
+            }
+
+            setGapReport({
+              match: matchScore,
+              present,
+              missing,
+              recommendation
+            });
+
             setScanComplete(true);
             triggerFloatingXP(150, "Scan Complete! +150 XP 🚀");
             return 100;
@@ -286,7 +415,7 @@ const HomePage = () => {
       }, 150);
     }
     return () => clearInterval(timer);
-  }, [scanning]);
+  }, [scanning, selectedRole, resumeText]);
 
   // Platform Features
   const features = [
@@ -322,57 +451,28 @@ const HomePage = () => {
     },
   ];
 
-  // Skills & Courses
-  const courses = [
-    {
-      title: 'Python Programming',
-      level: 'Beginner to Advanced',
-      desc: 'Master pythonic coding, structured problem solving, and foundation tools for scripting and basic AI.',
-      xp: 1200,
-      progress: 72,
-      gradient: 'from-blue-600 to-cyan-600',
-      students: '5.2K',
-      modules: 28,
-      hours: 42,
-      difficulty: 'Beginner'
-    },
-    {
-      title: 'C Programming Core',
-      level: 'Beginner Foundation',
-      desc: 'Understand low-level registers, compiler execution, system variables, pointers, and memory manipulation.',
-      xp: 1500,
-      progress: 45,
-      gradient: 'from-orange-500 to-red-600',
-      students: '3.8K',
-      modules: 20,
-      hours: 30,
-      difficulty: 'Beginner'
-    },
-    {
-      title: 'Java Development',
-      level: 'Intermediate Boost',
-      desc: 'Build robust, object-oriented, clean enterprise software structures using Java classes and design patterns.',
-      xp: 1800,
-      progress: 60,
-      gradient: 'from-purple-600 to-pink-600',
-      students: '4.6K',
-      modules: 32,
-      hours: 48,
-      difficulty: 'Intermediate'
-    },
-    {
-      title: 'MySQL Databases',
-      level: 'Beginner to Intermediate',
-      desc: 'Design relational tables, handle keys, optimize execution queries, and master join statements.',
-      xp: 1400,
-      progress: 68,
-      gradient: 'from-green-600 to-emerald-600',
-      students: '3.1K',
-      modules: 24,
-      hours: 36,
-      difficulty: 'Intermediate'
-    },
-  ];
+  // Dynamic Courses mapping from coursesData (Core Coding Languages)
+  const homeCourseIds = ['python', 'c', 'cplusplus', 'java', 'mysql'];
+  const courses = coursesData.filter(c => homeCourseIds.includes(c.id)).map(course => {
+    const gradients = {
+      python: 'from-blue-600 to-cyan-600',
+      c: 'from-orange-500 to-red-600',
+      cplusplus: 'from-indigo-600 to-purple-600',
+      java: 'from-purple-600 to-pink-600',
+      mysql: 'from-green-600 to-emerald-600'
+    };
+    const progressObj = courseProgress[course.id] || { started: false, progress: 0 };
+    return {
+      id: course.id,
+      title: course.name,
+      level: 'Ecosystem Core Course',
+      desc: course.description,
+      progress: progressObj.progress || 0,
+      started: progressObj.started,
+      gradient: gradients[course.id] || 'from-slate-600 to-slate-800',
+      difficulty: 'Core Coding'
+    };
+  });
 
   // Growth Journey Steps
   const journeySteps = [
@@ -553,9 +653,9 @@ const HomePage = () => {
                     
 
                     {/* Action link */}
-                    <Link to="/learning" className="mt-5">
+                    <Link to={`/learning/${course.id}`} className="mt-5">
                       <button className="w-full py-2 bg-white/5 hover:bg-gradient-to-r hover:from-cyan-500 hover:to-blue-600 rounded-lg text-xs font-bold transition-all duration-300 border border-white/10 hover:border-transparent flex items-center justify-center gap-1.5 group/btn">
-                        Start Learning Path
+                        {course.started ? 'Continue Syllabus' : 'Explore Syllabus'}
                         <ChevronRight className="w-3.5 h-3.5 group-hover/btn:translate-x-0.5 transition-transform" />
                       </button>
                     </Link>
@@ -621,15 +721,13 @@ const HomePage = () => {
         </div>
       </section>
 
-   
-
-      {/* SKILL GAP ANALYZER SIMULATOR */}
+         {/* SKILL GAP ANALYZER SIMULATOR */}
       <section className="relative py-32 px-6 border-b border-white/5" id="skill-gap">
         <div className="max-w-7xl mx-auto">
           <SectionTitle
             highlight="Skill Gap"
             title="Predictive AI Analyzer"
-            subtitle="Choose a high-demand futuristic target career below, and run the real-time AI scan simulator to see how the system generates custom actions."
+            subtitle="Upload your resume or paste your skills to run a real-time dynamic AI scan against high-demand futuristic target careers."
           />
 
           <div className="grid lg:grid-cols-12 gap-8 items-center">
@@ -649,7 +747,7 @@ const HomePage = () => {
 
                 {/* Role Toggles */}
                 <div className="space-y-2">
-                  {Object.keys(roleGapData).map(role => (
+                  {Object.keys(roleRequiredSkills).map(role => (
                     <button
                       key={role}
                       onClick={() => {
@@ -664,9 +762,74 @@ const HomePage = () => {
                   ))}
                 </div>
 
+                {/* Resume Upload / Input Mode */}
+                <div className="space-y-3 pt-2">
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                    Your Resume Credentials
+                  </label>
+                  
+                  <div className="flex gap-2 bg-slate-950 p-1.5 rounded-xl border border-white/5">
+                    <button
+                      type="button"
+                      onClick={() => setInputMode('upload')}
+                      className={`flex-1 py-2 text-xs font-bold rounded-lg transition-colors ${inputMode === 'upload' ? 'bg-white/10 text-white' : 'text-slate-400 hover:text-slate-200'}`}
+                    >
+                      Upload File
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setInputMode('text')}
+                      className={`flex-1 py-2 text-xs font-bold rounded-lg transition-colors ${inputMode === 'text' ? 'bg-white/10 text-white' : 'text-slate-400 hover:text-slate-200'}`}
+                    >
+                      Paste Text
+                    </button>
+                  </div>
+
+                  {inputMode === 'upload' ? (
+                    <div className="border border-dashed border-white/20 rounded-xl p-4 text-center hover:border-orange-500/50 transition-colors relative cursor-pointer group">
+                      <input
+                        type="file"
+                        accept=".txt,.pdf"
+                        onChange={handleFileUpload}
+                        className="absolute inset-0 opacity-0 cursor-pointer"
+                      />
+                      <div className="space-y-1">
+                        <div className="text-slate-300 text-xs font-semibold group-hover:text-orange-400 transition-colors">
+                          {resumeFileName ? `Selected: ${resumeFileName}` : 'Drag & Drop or Click to Upload'}
+                        </div>
+                        <p className="text-[10px] text-slate-500">Supports PDF or TXT formats</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <textarea
+                      rows={3}
+                      value={resumeText}
+                      onChange={(e) => setResumeText(e.target.value)}
+                      placeholder="Paste your resume text or listing of skills here..."
+                      className="w-full bg-slate-950 border border-white/10 rounded-xl p-3 text-xs text-white placeholder-slate-500 focus:border-orange-500/50 outline-none transition-colors resize-none font-semibold"
+                    />
+                  )}
+
+                  {uploadingResume && (
+                    <div className="space-y-1.5">
+                      <div className="flex justify-between text-[10px] text-slate-400">
+                        <span>Parsing resume...</span>
+                        <span>{uploadProgress}%</span>
+                      </div>
+                      <div className="h-1 bg-white/5 rounded-full overflow-hidden">
+                        <div className="h-full bg-orange-500 transition-all duration-300" style={{ width: `${uploadProgress}%` }} />
+                      </div>
+                    </div>
+                  )}
+
+                  {uploadError && (
+                    <p className="text-xs text-red-400 font-semibold">{uploadError}</p>
+                  )}
+                </div>
+
                 {/* Run Scan Button */}
                 <button
-                  disabled={scanning}
+                  disabled={scanning || uploadingResume}
                   onClick={handleRunScan}
                   className="w-full py-4 bg-gradient-to-r from-orange-500 to-amber-600 text-slate-950 font-black rounded-xl hover:shadow-2xl hover:shadow-orange-500/30 transition-all duration-300 disabled:opacity-50 flex items-center justify-center gap-2 text-sm"
                 >
@@ -702,7 +865,7 @@ const HomePage = () => {
                       </div>
                       <h4 className="text-xl font-bold">Diagnostics Scanner Ready</h4>
                       <p className="text-slate-400 text-xs max-w-xs mx-auto">
-                        Click the trigger button to run an automated AI analysis of your foundation strengths vs. missing courses.
+                        Upload your resume file or paste text details on the left, then click the scan trigger to perform real-time gap analysis.
                       </p>
                     </motion.div>
                   )}
@@ -732,7 +895,7 @@ const HomePage = () => {
                     </motion.div>
                   )}
 
-                  {scanComplete && (
+                  {scanComplete && gapReport && (
                     <motion.div
                       key="complete"
                       initial={{ opacity: 0, scale: 0.95 }}
@@ -742,12 +905,12 @@ const HomePage = () => {
                       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-4 border-b border-white/5">
                         <div>
                           <h4 className="text-2xl font-black text-white">{selectedRole} Gap Report</h4>
-                          <p className="text-xs text-slate-400">Target matches calculated dynamically by AI</p>
+                          <p className="text-xs text-slate-400">Target matches calculated dynamically from resume</p>
                         </div>
                         <div className="text-right">
                           <p className="text-[10px] text-slate-400 font-bold uppercase">Clarity Score</p>
                           <p className="text-3xl font-black text-orange-400">
-                            {roleGapData[selectedRole].match}%
+                            {gapReport.match}%
                           </p>
                         </div>
                       </div>
@@ -759,11 +922,14 @@ const HomePage = () => {
                             <CheckCircle2 className="w-4 h-4" /> Strong Foundation
                           </p>
                           <ul className="space-y-2 text-xs text-slate-300">
-                            {roleGapData[selectedRole].present.map(item => (
+                            {gapReport.present.map(item => (
                               <li key={item} className="flex items-center gap-1">
                                 <span className="text-green-500">✓</span> {item}
                               </li>
                             ))}
+                            {gapReport.present.length === 0 && (
+                              <span className="text-slate-500 uppercase italic">No matching skills identified</span>
+                            )}
                           </ul>
                         </div>
 
@@ -773,11 +939,14 @@ const HomePage = () => {
                             <AlertTriangle className="w-4 h-4 animate-bounce" /> Missing Core Skills
                           </p>
                           <ul className="space-y-2 text-xs text-slate-300">
-                            {roleGapData[selectedRole].missing.map(item => (
+                            {gapReport.missing.map(item => (
                               <li key={item} className="flex items-center gap-1">
                                 <span className="text-orange-500 font-bold">•</span> {item}
                               </li>
                             ))}
+                            {gapReport.missing.length === 0 && (
+                              <span className="text-green-400 font-bold">✓ None! You meet all criteria</span>
+                            )}
                           </ul>
                         </div>
                       </div>
@@ -788,7 +957,7 @@ const HomePage = () => {
                           <Sparkles className="w-3.5 h-3.5" /> AI Recommended Priority
                         </p>
                         <p className="text-xs text-slate-300 leading-relaxed font-semibold">
-                          {roleGapData[selectedRole].recommendation}
+                          {gapReport.recommendation}
                         </p>
                       </div>
                     </motion.div>
@@ -1160,15 +1329,7 @@ const HomePage = () => {
 
           </div>
 
-          {/* Bottom Copyright bar */}
-          <div className="border-t border-white/5 pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-slate-500">
-            <p>© 2026 CurveUrCareer. All rights reserved. | Empowering Student Growth Globally</p>
-            <div className="flex gap-6 font-semibold">
-              <a href="/" className="hover:text-cyan-400 transition-colors">Privacy Policy</a>
-              <a href="/" className="hover:text-cyan-400 transition-colors">Terms of Service</a>
-              <a href="/" className="hover:text-cyan-400 transition-colors">Accessibility Guidelines</a>
-            </div>
-          </div>
+          
 
         </div>
       </footer>

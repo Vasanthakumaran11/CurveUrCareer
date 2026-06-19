@@ -1,168 +1,122 @@
-# Career Guidance Platform
+# CurveUrCareer // Career Intelligence Engine
 
-A comprehensive web-based career guidance and decision-support system for students after 12th grade with Firebase Firestore integration.
+A production-ready, highly interactive "Discover Yourself" assessment experience and multidimensional Career Intelligence Dashboard built for CurveUrCareer. The platform guides students from educational analysis and behavioral cognitive calibration to concrete learning paths and tiered college highlights.
 
-## Features
+---
 
-- **5-Step Assessment Process**: Academic background, interest discovery, skills assessment, and career expectations
-- **Smart Recommendations**: Multi-factor scoring algorithm (40% Academic, 30% Interest, 20% Skills, 10% Expectations)
-- **Data Visualization**: Interactive charts showing interest profiles and skills assessment
-- **College Recommendations**: Categorized into Dream, Realistic, and Safe options with Firebase data
-- **PDF Reports**: Downloadable comprehensive career guidance reports
-- **Firebase Integration**: Real-time data storage and retrieval with Firestore
-- **Responsive Design**: Works seamlessly on desktop, tablet, and mobile devices
+## 🌟 Core Architecture
 
-## Tech Stack
+The platform consists of two main sections: an immersive **3-Stage Assessment Journey** and a **Career Intelligence Dashboard** powered by a Express backend + Supabase database system (with seamless in-memory cache fallbacks).
 
-- **Frontend**: React 18 with Vite
-- **Backend**: Firebase Firestore
-- **Styling**: Tailwind CSS
-- **Routing**: React Router
-- **Charts**: Recharts
-- **Animations**: Framer Motion
-- **PDF Generation**: jsPDF
-- **Icons**: Lucide React
+### 1. 3-Stage Assessment Journey
+Takes approximately 8–10 minutes and replaces static forms with interactive visual components:
+- **Academic Intelligence**: Calibrates Explorer Codename, Educational level (`10th Completed`, `11th`, `12th`, `College 1st Year`, `College 2nd Year`), selected streams, favorite subjects through card chips, average marks (exact percentages or ranges), and academic confidence level.
+- **Skill Discovery Game**: 12 highly engaging interactive mini-game moments (pattern-recognition sequence puzzles, resource allocations, priority evaluations, team conflict coordinates, observation challenges, etc.) evaluating 12 cognitive skills:
+  - Logical Thinking & Problem Solving
+  - Analytical & Critical Thinking
+  - Creativity & Curiosity
+  - Communication & Leadership
+  - Observation & Adaptability
+  - Decision Making & Learning Behavior
+  - *Silently tracks interaction click telemetry, retry attempts, and latency (hesitation time) to build a behavioral profile.*
+- **Career Lifestyle Mapping**: Visual cards mapping preferred workspaces (`Corporate Office`, `Research Lab`, `Hospital`, `Startup`, `Government Office`, `Creative Studio`, `Remote Work`, `Field-Based Work`), higher studies intent, study locations (home state, abroad, etc.), and lifestyle priorities. Sliders define affinity to government jobs, private sector, entrepreneurship, research, freelancing, and emerging technology.
 
-## Firebase Setup
+### 2. Career Intelligence Dashboard
+A comprehensive 5-tab analytical dashboard that aggregates all profiling data:
+- **Identity Snapshot**: Dominant behavioral archetype (e.g. *Strategic Systems Architect*, *Imaginative Product Innovator*), descriptions, and trait list.
+- **Academic Insights**: Stream matching, subject affinity analysis, and academic confidence indicators.
+- **Skill Analytics Spectrogram**: A Polar Radar Chart displaying logical, analytical, critical, creativity, communication, curiosity, and problem-solving quotients.
+- **Career Directions & Reality Analysis**: Matching percentages, starting salary metrics, demand projections, stability index, competition profiles, backup directions, and future outlook summaries.
+- **Skill Gap Analyzer**: Compares career required skills against the student's validated strengths. Suggests projects and certifications. Links gaps directly to CurveUrCareer's internal learning modules (`Python`, `C`, `Java`, `MySQL`, `Communication Skills`, `Problem Solving`).
+- **Horizon Roadmap**: A structured 6-stage roadmap tracking growth across Foundations, Skill Development, Projects, Internships, Advanced Specializations, and Placement Readiness.
+- **Higher Education & Tiered Colleges**: Suggested degrees and tiered colleges: Tier 1 (Dream), Tier 2 (Realistic), and Tier 3 (Safe).
 
-### Prerequisites
+---
 
-1. Create a Firebase project at [https://console.firebase.google.com/](https://console.firebase.google.com/)
-2. Enable Firestore Database in your Firebase project
-3. Set up Firestore security rules for development (allow read/write for testing)
+## 🛠️ Tech Stack
 
-### Firestore Security Rules (Development)
+- **Frontend**: React 18, Vite, React Router, Recharts (Radar charts), Framer Motion (Animations), Lucide React (Icons).
+- **Backend API**: Node.js, Express, Supabase JS client.
+- **Database**: PostgreSQL (Supabase) + local in-memory fallback cache.
+- **Styling**: Tailwind CSS.
 
-```javascript
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    // Allow read/write access for development
-    match /{document=**} {
-      allow read, write: if true;
-    }
-  }
-}
+---
+
+## 🗃️ Database Initialization
+
+Initialize the PostgreSQL schema in your Supabase SQL editor:
+
+```sql
+-- Profiles extended parameters
+ALTER TABLE public.profiles 
+ADD COLUMN IF NOT EXISTS name TEXT,
+ADD COLUMN IF NOT EXISTS academic_stream TEXT,
+ADD COLUMN IF NOT EXISTS favorite_subjects TEXT[],
+ADD COLUMN IF NOT EXISTS marks_range TEXT,
+ADD COLUMN IF NOT EXISTS academic_confidence INTEGER,
+ADD COLUMN IF NOT EXISTS lifestyle_preferences JSONB,
+ADD COLUMN IF NOT EXISTS onboarding_completed BOOLEAN DEFAULT FALSE;
+
+-- Discover Yourself Results Table
+CREATE TABLE IF NOT EXISTS public.discover_yourself_results (
+  user_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  top_strengths TEXT[],
+  detected_patterns TEXT[],
+  recommended_pathways TEXT[],
+  skill_gaps TEXT[],
+  personalized_summary TEXT,
+  dashboard_data JSONB,
+  completion_timestamp TIMESTAMPTZ DEFAULT NOW()
+);
 ```
 
-### Environment Configuration
+---
 
-1. Copy your Firebase config from the Firebase console (Project Settings > General > Your apps)
-2. Create a `.env` file in the project root with your Firebase configuration:
-
-```env
-# Firebase Configuration
-VITE_FIREBASE_API_KEY=your_api_key_here
-VITE_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
-VITE_FIREBASE_PROJECT_ID=your_project_id
-VITE_FIREBASE_STORAGE_BUCKET=your_project.appspot.com
-VITE_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
-VITE_FIREBASE_APP_ID=your_app_id
-```
-
-### Data Structure
-
-The app expects the following Firestore collections:
-
-- **assessments**: Stores user assessment results
-- **colleges**: Stores college data for recommendations
-
-## Getting Started
+## 🚀 Getting Started
 
 ### Installation
 
+1. Navigate to the project directories:
+   ```bash
+   # Build the backend
+   cd backend
+   npm install
+   
+   # Build the frontend
+   cd ../frontend
+   npm install
+   ```
+
+2. Configure environments:
+   - Backend `.env`:
+     ```env
+     PORT=5050
+     SUPABASE_URL="https://your-project.supabase.co"
+     SUPABASE_ANON_KEY="your-anon-key"
+     ```
+   - Frontend `.env.local` or `.env`:
+     ```env
+     VITE_API_URL="http://localhost:5050"
+     ```
+
+### Execution
+
+Launch both servers:
 ```bash
-# Navigate to project directory
-cd career-guidance-platform
+# In backend directory
+node index.js
 
-# Install dependencies
-npm install
-
-# Start development server
+# In frontend directory
 npm run dev
 ```
 
-The app will be available at `http://localhost:5173`
+The application will launch on `http://localhost:5173`. Complete the onboarding sequence to unlock your rich Career Intelligence matrix.
 
-### Build for Production
+---
 
-```bash
-npm run build
-npm run preview
-```
+## 📑 File Structure
 
-## Project Structure
-
-```
-src/
-├── components/          # React components
-│   ├── gamification/    # Interactive assessment components
-│   └── ...              # Other UI components
-├── data/               # Local course, college, and career path data
-├── hooks/              # Custom React hooks
-├── pages/              # Page components
-├── services/           # Firebase service layer
-├── utils/              # Utility functions
-├── firebase.js         # Firebase configuration
-├── index.css           # Global styles
-└── main.jsx            # App entry point
-```
-
-## Firebase Integration Details
-
-### Service Layer
-
-The app uses a clean service layer architecture:
-
-- **`src/firebase.js`**: Firebase configuration and initialization
-- **`src/services/firestoreService.js`**: All database operations with error handling
-
-### Data Flow
-
-1. **Assessment Completion**: Results are saved to Firebase only after assessment completion
-2. **College Data**: Fetched from Firebase on app load, falls back to local data
-3. **Session Management**: localStorage for persistence, sessionStorage for temporary data
-4. **Error Handling**: Graceful degradation when Firebase is unavailable
-
-### Key Features
-
-- **Async Operations**: All Firebase calls use async/await with try-catch
-- **Validation**: Firebase config validation before initialization
-- **Fallback**: App works without Firebase (local data only)
-- **Performance**: Minimal database writes, optimized for cost
-
-## Usage
-
-1. **Start Assessment**: Click "Start Assessment" on the home page
-2. **Complete Steps**: Fill out academic background, interests, skills, and expectations
-3. **View Results**: Get personalized course and college recommendations
-4. **Download Report**: Generate and download a PDF report
-
-## Customization
-
-- **Update Courses**: Edit `src/data/coursesData.js`
-- **Update Colleges**: Edit `src/data/collegesData.js` or Firebase collection
-- **Modify Scoring**: Adjust weights in `src/utils/scoringLogic.js`
-- **Change Styling**: Update `tailwind.config.js`
-- **Firebase Config**: Update `.env` file with your Firebase credentials
-
-## Troubleshooting
-
-### Common Firebase Issues
-
-- **"Firebase App not initialized"**: Check `.env` file and Firebase config
-- **"Missing or invalid API key"**: Verify API key in `.env` file
-- **"Firestore permission denied"**: Check Firestore security rules
-- **Network errors**: Ensure internet connection and Firebase project is active
-
-### Development Mode
-
-For development, Firestore rules allow all read/write operations. Update rules for production deployment.
-
-## License
-
-MIT
-
-## Author
-
-Built with ❤️ for students seeking career guidance
+- **[`AssessmentPage.jsx`](file:///c:/Users/Raja/Desktop/CurveUrCareer/frontend/src/pages/AssessmentPage.jsx)**: Immersive 3-stage self-discovery journey with interactive card matrices and stepper coordinates.
+- **[`ResultsDashboard.jsx`](file:///c:/Users/Raja/Desktop/CurveUrCareer/frontend/src/components/ResultsDashboard.jsx)**: 5-tab Career Intelligence dashboard rendering snapshot, radar charts, capstones, and course links.
+- **[`discoverController.js`](file:///c:/Users/Raja/Desktop/CurveUrCareer/backend/controllers/discoverController.js)**: Profile synthesis and career pathway scoring algorithms.
+- **[`db_schema.sql`](file:///c:/Users/Raja/Desktop/CurveUrCareer/backend/db_schema.sql)**: Database structures.

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { 
   ArrowLeft, CheckCircle2, DollarSign, Briefcase, 
@@ -12,6 +12,62 @@ const CourseDetails = () => {
   const { courseId } = useParams();
   const navigate = useNavigate();
   const course = coursesData.find(c => c.id === courseId);
+
+  const [started, setStarted] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [completedModules, setCompletedModules] = useState([]);
+
+  useEffect(() => {
+    const saved = localStorage.getItem('curveurcareer_course_progress');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed[courseId]) {
+          setStarted(parsed[courseId].started || false);
+          setProgress(parsed[courseId].progress || 0);
+          setCompletedModules(parsed[courseId].completedModules || []);
+        }
+      } catch (e) {
+        console.error("Failed to parse progress", e);
+      }
+    }
+  }, [courseId]);
+
+  const saveProgressToStorage = (isStarted, currentProgress, currentModules) => {
+    const saved = localStorage.getItem('curveurcareer_course_progress') || '{}';
+    try {
+      const parsed = JSON.parse(saved);
+      parsed[courseId] = {
+        started: isStarted,
+        progress: currentProgress,
+        completedModules: currentModules,
+        lastAccessed: new Date().toISOString()
+      };
+      localStorage.setItem('curveurcareer_course_progress', JSON.stringify(parsed));
+    } catch (e) {
+      console.error("Failed to save progress", e);
+    }
+  };
+
+  const handleStartCourse = () => {
+    setStarted(true);
+    setProgress(20);
+    setCompletedModules([0]); // Check the first module by default
+    saveProgressToStorage(true, 20, [0]);
+  };
+
+  const handleToggleModule = (idx) => {
+    let newModules;
+    if (completedModules.includes(idx)) {
+      newModules = completedModules.filter(m => m !== idx);
+    } else {
+      newModules = [...completedModules, idx];
+    }
+    const newProgress = Math.round((newModules.length / 5) * 100);
+    setCompletedModules(newModules);
+    setProgress(newProgress);
+    saveProgressToStorage(started, newProgress, newModules);
+  };
 
   if (!course) {
     return (
@@ -165,9 +221,21 @@ const CourseDetails = () => {
                    {course.name}
                  </h1>
               </div>
-              <button className="px-10 py-5 bg-gradient-to-r from-cyan-500 to-blue-600 hover:shadow-lg hover:shadow-cyan-500/20 text-white rounded-2xl font-black text-md transition-all hover:-translate-y-1 shadow-md">
-                Enroll Syllabus
-              </button>
+              {started ? (
+                <div className={`px-8 py-4 bg-slate-900 border ${progress === 100 ? 'border-emerald-500/50 text-emerald-400' : 'border-cyan-500/50 text-cyan-400'} rounded-2xl font-black text-md shadow-lg flex flex-col items-center gap-1`}>
+                  <span className="text-[10px] text-slate-500 uppercase tracking-widest block font-mono">YOUR COURSE STATE</span>
+                  <span className="uppercase text-sm tracking-wider font-bold">
+                    {progress === 100 ? 'Syllabus Completed 🏆' : `Learning: ${progress}%`}
+                  </span>
+                </div>
+              ) : (
+                <button
+                  onClick={handleStartCourse}
+                  className="px-10 py-5 bg-gradient-to-r from-cyan-500 to-blue-600 hover:shadow-lg hover:shadow-cyan-500/20 text-white rounded-2xl font-black text-md transition-all hover:-translate-y-1 shadow-md hover:scale-105 active:scale-95 duration-200"
+                >
+                  Start Course
+                </button>
+              )}
             </div>
           </motion.div>
         </div>
@@ -176,6 +244,90 @@ const CourseDetails = () => {
       <div className="max-w-5xl mx-auto px-6 mt-12 grid grid-cols-1 lg:grid-cols-3 gap-8 relative z-10">
         {/* Left Column - Details */}
         <div className="lg:col-span-2 space-y-8">
+          {/* Syllabus Progress Tracking Checklist Card */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="backdrop-blur-md bg-slate-900/40 p-8 rounded-3xl border border-white/10 shadow-2xl relative overflow-hidden"
+          >
+            <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-bl from-white/5 to-transparent pointer-events-none rounded-tr-3xl" />
+            
+            <div className="flex justify-between items-center mb-6">
+              <div className="flex items-center gap-3">
+                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center bg-cyan-500/10 text-cyan-400 border border-cyan-500/30`}>
+                  <GraduationCap className="w-6 h-6" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-black text-white tracking-tight">
+                    Syllabus Tracking
+                  </h2>
+                  <p className="text-slate-500 text-xxs font-mono uppercase tracking-wider mt-0.5">// ACTIVE PROGRESS CHECKLIST</p>
+                </div>
+              </div>
+              
+              {started && (
+                <div className="text-right">
+                  <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Progress</div>
+                  <div className="text-2xl font-black text-cyan-400">{progress}%</div>
+                </div>
+              )}
+            </div>
+
+            {!started ? (
+              <div className="text-center p-6 bg-slate-950/60 border border-white/5 rounded-2xl">
+                <Sparkles className="w-10 h-10 text-cyan-400 mx-auto mb-3 animate-pulse" />
+                <h4 className="text-base font-bold text-white uppercase tracking-wider mb-2">Track Your Learnings</h4>
+                <p className="text-slate-400 text-xs leading-relaxed max-w-sm mx-auto mb-4">
+                  Start learning this course path to unlock the dynamic module completion checklists and track your skills!
+                </p>
+                <button
+                  onClick={handleStartCourse}
+                  className="px-6 py-2.5 bg-gradient-to-r from-cyan-500 to-blue-600 hover:shadow-md text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all duration-300"
+                >
+                  Unlock Progress Tracker
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {/* Progress bar */}
+                <div className="space-y-1.5">
+                  <div className="h-2 bg-white/5 rounded-full overflow-hidden border border-white/10">
+                    <motion.div
+                      animate={{ width: `${progress}%` }}
+                      transition={{ duration: 0.5 }}
+                      className="h-full bg-gradient-to-r from-cyan-400 to-blue-500 rounded-full"
+                    />
+                  </div>
+                </div>
+
+                {/* Checklist items */}
+                <div className="space-y-3">
+                  {[
+                    "Module 1: Foundational Principles & Core Concepts",
+                    "Module 2: Intermediate Architecture & Applied Case Studies",
+                    "Module 3: Deep Technical Integration & Tooling Basics",
+                    "Module 4: Advanced Optimizations & Real-world Workflows",
+                    "Module 5: Capstone Application Development & Industry Readiness"
+                  ].map((moduleName, idx) => {
+                    const isChecked = completedModules.includes(idx);
+                    return (
+                      <div
+                        key={idx}
+                        onClick={() => handleToggleModule(idx)}
+                        className={`p-4 rounded-xl border transition-all duration-300 cursor-pointer flex items-center gap-4 ${isChecked ? 'bg-cyan-950/20 border-cyan-500/30 text-white' : 'bg-slate-950/50 border-white/5 text-slate-400 hover:border-white/15'}`}
+                      >
+                        <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${isChecked ? 'bg-cyan-500 border-cyan-500 text-slate-950' : 'border-slate-700'}`}>
+                          {isChecked && <CheckCircle2 className="w-3.5 h-3.5 stroke-[3] text-slate-950" />}
+                        </div>
+                        <span className="text-xs font-semibold tracking-wide uppercase font-mono">{moduleName}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </motion.div>
+
           {sections.map((section, idx) => (
             <motion.section
               initial={{ opacity: 0, y: 20 }}

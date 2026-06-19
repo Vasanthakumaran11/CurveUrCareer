@@ -80,17 +80,9 @@ const MainContent = () => {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/signup" element={<SignupPage />} />
           
-          {/* Learning Platform Routes (Protected) */}
-          <Route path="/learning" element={
-            <ProtectedRoute>
-              <LearningDashboard />
-            </ProtectedRoute>
-          } />
-          <Route path="/learning/:courseId" element={
-            <ProtectedRoute>
-              <CourseDetails />
-            </ProtectedRoute>
-          } />
+          {/* Learning Platform Routes (Public) */}
+          <Route path="/learning" element={<LearningDashboard />} />
+          <Route path="/learning/:courseId" element={<CourseDetails />} />
         </Routes>
       </div>
     </div>
