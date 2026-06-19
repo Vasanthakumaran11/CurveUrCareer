@@ -24,6 +24,7 @@ ADD COLUMN IF NOT EXISTS academic_stream TEXT,
 ADD COLUMN IF NOT EXISTS favorite_subjects TEXT[],
 ADD COLUMN IF NOT EXISTS marks_range TEXT,
 ADD COLUMN IF NOT EXISTS academic_confidence INTEGER,
+ADD COLUMN IF NOT EXISTS lifestyle_preferences JSONB,
 ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
 
 -- 2. Create User Interests Table (stores captured interest weights)
@@ -59,8 +60,18 @@ CREATE TABLE IF NOT EXISTS public.interaction_logs (
   response_time INTEGER, -- capture millisecond latency 
   choice_pattern JSONB, -- store specific choices
   engagement_score NUMERIC DEFAULT 0.0,
+  hover_sequences JSONB, -- Timeline records of option cursor hovers
+  scroll_depth INTEGER, -- Tracks reader pacing & vertical traversal
+  text_selection_count INT, -- Occurrences of text highlighting (Analytical Trait)
+  middle_click_backtrack BOOLEAN, -- Flags page escape signals or forced updates
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Telemetry Blueprint V2 SQL Migrations (run if database already exists):
+-- ALTER TABLE public.interaction_logs ADD COLUMN IF NOT EXISTS hover_sequences JSONB;
+-- ALTER TABLE public.interaction_logs ADD COLUMN IF NOT EXISTS scroll_depth INTEGER;
+-- ALTER TABLE public.interaction_logs ADD COLUMN IF NOT EXISTS text_selection_count INT;
+-- ALTER TABLE public.interaction_logs ADD COLUMN IF NOT EXISTS middle_click_backtrack BOOLEAN;
 
 -- 5. Create Discover Yourself Results Table (captures completed analysis summaries)
 CREATE TABLE IF NOT EXISTS public.discover_yourself_results (
@@ -70,6 +81,7 @@ CREATE TABLE IF NOT EXISTS public.discover_yourself_results (
   recommended_pathways TEXT[],
   skill_gaps TEXT[], -- identified beginner skill gaps for improvements
   personalized_summary TEXT,
+  dashboard_data JSONB,
   completion_timestamp TIMESTAMPTZ DEFAULT NOW()
 );
 

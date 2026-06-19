@@ -2,6 +2,99 @@ import { supabase } from '../config/supabase.js';
 import { fallbackCache } from '../config/inMemoryCache.js';
 
 /**
+ * Parses raw cognitive telemetry metrics into foundational skills & modifiers
+ */
+function processCognitiveTelemetry(data) {
+  let foundationalSkills = {
+    logicalThinking: 15,
+    analyticalThinking: 15,
+    criticalThinking: 15,
+    creativity: 15,
+    communication: 15,
+    curiosity: 15,
+    problemSolving: 15,
+    observationSkills: 15,
+    decisionMaking: 15,
+    leadership: 15,
+    adaptability: 15
+  };
+  let profilingModifiers = {
+    confidence_weight: 1.0,
+    precision_weight: 1.0,
+    panic_index: 0.0
+  };
+
+  const simAnswers = data.simulationAnswers || {};
+
+  // 1. Systems Crash Simulation (Logical & Analytical)
+  const sc1 = simAnswers.systemsCrash || {};
+  if (sc1.auth >= 1 && sc1.db >= 1) {
+    foundationalSkills.logicalThinking += 10;
+    foundationalSkills.analyticalThinking += 5;
+  }
+  if (sc1.db > sc1.auth) {
+    foundationalSkills.analyticalThinking += 10;
+  }
+
+  // 2. Monolithic Deadlock Simulation (Critical Thinking & Decision Making)
+  const sc2 = simAnswers.monolithicDeadlock;
+  if (sc2 === 'A') {
+    foundationalSkills.criticalThinking += 12;
+    foundationalSkills.decisionMaking += 8;
+  } else if (sc2 === 'B') {
+    foundationalSkills.criticalThinking += 15;
+    foundationalSkills.decisionMaking += 10;
+  }
+
+  // 3. Orbital Debris Intercept Simulation (Creativity & Problem Solving)
+  const sc3 = simAnswers.orbitalDebris;
+  if (sc3 === 'A') {
+    foundationalSkills.creativity += 15;
+    foundationalSkills.problemSolving += 5;
+  } else if (sc3 === 'D') {
+    foundationalSkills.problemSolving += 15;
+    foundationalSkills.creativity += 8;
+  } else {
+    foundationalSkills.problemSolving += 10;
+    foundationalSkills.creativity += 5;
+  }
+
+  // 4. Telemetry matrix evaluation
+  const telemetry = data.telemetry || {};
+  const elapsedMs = telemetry.elapsedMs || 0;
+  const optionSwitches = telemetry.optionSwitches || 0;
+  const textHighlighted = telemetry.textHighlighted || false;
+  const textSelectionCount = telemetry.textSelectionCount || 0;
+
+  if (elapsedMs > 8000) {
+    profilingModifiers.confidence_weight -= 0.15;
+    profilingModifiers.precision_weight += 0.20;
+  }
+  if (optionSwitches > 2) {
+    profilingModifiers.panic_index += 0.35;
+  }
+  if (textHighlighted || textSelectionCount > 2) {
+    profilingModifiers.precision_weight += 0.15;
+    foundationalSkills.criticalThinking += 3;
+  }
+
+  // Scale scores back to fit behavior_profile range (1 to 5) for storage
+  const behaviorData = {
+    analytical_score: Math.min(5, Math.max(1, Math.round(foundationalSkills.analyticalThinking / 6))),
+    creativity_score: Math.min(5, Math.max(1, Math.round(foundationalSkills.creativity / 6))),
+    exploration_level: Math.min(5, Math.max(1, Math.round(foundationalSkills.observationSkills / 6))),
+    communication_tendency: Math.min(5, Math.max(1, Math.round(foundationalSkills.communication / 6))),
+    curiosity_score: Math.min(5, Math.max(1, Math.round(foundationalSkills.curiosity / 6))),
+    logical_reasoning_score: Math.min(5, Math.max(1, Math.round(foundationalSkills.logicalThinking / 6))),
+    retry_behavior_score: Math.min(5, Math.max(1, Math.round(foundationalSkills.adaptability / 6))),
+    emotional_confidence_score: Math.min(5, Math.max(1, Math.round(foundationalSkills.problemSolving / 6))),
+    learning_style_pattern: data.learningBehavior || 'Adaptive Learner'
+  };
+
+  return { foundationalSkills, profilingModifiers, behaviorData };
+}
+
+/**
  * Capture progressive onboarding self-discovery steps
  * POST /api/discover/progress
  */
@@ -24,25 +117,26 @@ export const saveProgress = async (req, res) => {
             interaction_type: `stage_${stage}`,
             response_time: metrics.responseTime || 0,
             choice_pattern: { data, metrics },
-            engagement_score: metrics.engagementScore || 1.0
+            engagement_score: metrics.engagementScore || 1.0,
+            hover_sequences: metrics.hoverSequences || null,
+            scroll_depth: metrics.scrollDepth || null,
+            text_selection_count: metrics.textSelectionCount || null,
+            middle_click_backtrack: metrics.middleClickBacktrack || null
           });
       } catch (logError) {
-        console.warn('Interaction log Supabase write failed (RLS blocked), skipping log.', logError.message);
+        console.warn('Interaction log Supabase write failed, skipping log.', logError.message);
       }
     }
 
     // 2. Perform progressive saving depending on onboarding phase
     switch (stage) {
       case 'identity': {
-        // Save educational stage in-memory
         fallbackCache.setProfile(userId, { 
           education_stage: data.educationStage,
           name: data.name || req.user.user_metadata?.username
         });
-
-        // Try Supabase save
         try {
-          const { error: idError } = await req.supabase
+          await req.supabase
             .from('profiles')
             .upsert({ 
               id: userId,
@@ -52,43 +146,97 @@ export const saveProgress = async (req, res) => {
               education_stage: data.educationStage,
               updated_at: new Date().toISOString()
             }, { onConflict: 'id' });
-          if (idError) console.warn('Supabase profile save failed, relying on cache fallback:', idError.message);
         } catch (dbErr) {
-          console.warn('Supabase profile save exception, relying on cache fallback:', dbErr.message);
+          console.warn('Supabase profile identity save error:', dbErr.message);
         }
         break;
       }
 
-      case 'academic_journey': {
-        // Save academic details in-memory cache
+      case 'academic_journey':
+      case 'academic_intelligence': {
+        // Handle new academic intelligence format
+        const stream = data.academicStream || data.stream;
+        const favSubjects = data.favoriteSubjects || [];
+        const marks = data.marks || data.marksRange;
+        const confidence = data.academicConfidence || data.confidence;
+
         fallbackCache.setProfile(userId, {
-          academic_stream: data.stream,
-          favorite_subjects: data.favoriteSubjects,
-          marks_range: data.marksRange,
-          academic_confidence: data.academicConfidence
+          name: data.name,
+          academic_stream: stream,
+          favorite_subjects: favSubjects,
+          marks_range: marks,
+          academic_confidence: confidence
         });
 
-        // Try Supabase save
         try {
-          const { error: acError } = await req.supabase
+          await req.supabase
+            .from('profiles')
+            .upsert({
+              id: userId,
+              email: req.user.email,
+              username: req.user.user_metadata?.username || req.user.email?.split('@')[0] || 'Explorer',
+              name: data.name || req.user.user_metadata?.username,
+              academic_stream: stream,
+              favorite_subjects: favSubjects,
+              marks_range: marks,
+              academic_confidence: confidence,
+              updated_at: new Date().toISOString()
+            }, { onConflict: 'id' });
+        } catch (dbErr) {
+          console.warn('Supabase academic save error:', dbErr.message);
+        }
+        break;
+      }
+
+      case 'skill_discovery': {
+        const { foundationalSkills, profilingModifiers, behaviorData } = processCognitiveTelemetry(data);
+
+        // Cache full skill discovery details
+        fallbackCache.setBehaviorProfile(userId, {
+          ...behaviorData,
+          all_skills: foundationalSkills,
+          tracking_metrics: {
+            ...profilingModifiers,
+            elapsedMs: data.telemetry?.elapsedMs,
+            optionSwitches: data.telemetry?.optionSwitches
+          }
+        });
+
+        try {
+          await req.supabase
+            .from('behavior_profile')
+            .upsert({
+              user_id: userId,
+              ...behaviorData,
+              updated_at: new Date().toISOString()
+            });
+        } catch (dbErr) {
+          console.warn('Supabase behavior profile save error:', dbErr.message);
+        }
+        break;
+      }
+
+      case 'career_lifestyle': {
+        fallbackCache.setProfile(userId, {
+          lifestyle_preferences: data
+        });
+
+        try {
+          await req.supabase
             .from('profiles')
             .update({
-              academic_stream: data.stream,
-              favorite_subjects: data.favoriteSubjects,
-              marks_range: data.marksRange,
-              academic_confidence: data.academicConfidence,
+              lifestyle_preferences: data,
               updated_at: new Date().toISOString()
             })
             .eq('id', userId);
-          if (acError) console.warn('Supabase academic save failed, relying on cache fallback:', acError.message);
         } catch (dbErr) {
-          console.warn('Supabase academic save exception, relying on cache fallback:', dbErr.message);
+          console.warn('Supabase lifestyle save error:', dbErr.message);
         }
         break;
       }
 
+      // Keep legacy cases for safe backwards-compatibility
       case 'interests_decided': {
-        // Save bulk array of direct interest selections in cache
         const interestRows = (data.interests || []).map(interest => ({
           user_id: userId,
           interest: interest,
@@ -97,34 +245,25 @@ export const saveProgress = async (req, res) => {
           created_at: new Date().toISOString()
         }));
         fallbackCache.setInterests(userId, interestRows);
-
-        // Try Supabase save
         try {
           await req.supabase.from('user_interests').delete().eq('user_id', userId);
           if (interestRows.length > 0) {
-            const { error: intError } = await req.supabase
-              .from('user_interests')
-              .upsert(interestRows);
-            if (intError) console.warn('Supabase interests save failed:', intError.message);
+            await req.supabase.from('user_interests').upsert(interestRows);
           }
         } catch (dbErr) {
-          console.warn('Supabase interests exception:', dbErr.message);
+          console.warn('Supabase legacy interests save error:', dbErr.message);
         }
         break;
       }
 
       case 'interests_scenarios': {
-        // Calculate dynamic interest profiles from scenario choices
         const interestMap = {};
         if (Array.isArray(data.scenarios)) {
           data.scenarios.forEach(sc => {
             const interest = sc.mappedInterest;
-            if (interest) {
-              interestMap[interest] = (interestMap[interest] || 0) + 1;
-            }
+            if (interest) interestMap[interest] = (interestMap[interest] || 0) + 1;
           });
         }
-
         const calculatedInterests = Object.entries(interestMap).map(([interest, score]) => ({
           user_id: userId,
           interest: interest,
@@ -132,20 +271,14 @@ export const saveProgress = async (req, res) => {
           confidence_score: 0.7,
           created_at: new Date().toISOString()
         }));
-
         fallbackCache.setInterests(userId, calculatedInterests);
-
-        // Try Supabase save
         try {
           await req.supabase.from('user_interests').delete().eq('user_id', userId);
           if (calculatedInterests.length > 0) {
-            const { error: scenIntError } = await req.supabase
-              .from('user_interests')
-              .upsert(calculatedInterests);
-            if (scenIntError) console.warn('Supabase scenario interests failed:', scenIntError.message);
+            await req.supabase.from('user_interests').upsert(calculatedInterests);
           }
         } catch (dbErr) {
-          console.warn('Supabase scenario interests exception:', dbErr.message);
+          console.warn('Supabase scenario interests error:', dbErr.message);
         }
         break;
       }
@@ -162,42 +295,21 @@ export const saveProgress = async (req, res) => {
           emotional_confidence_score: data.confidenceScore || 0,
           learning_style_pattern: data.learningStylePattern || 'Observer'
         };
-
         fallbackCache.setBehaviorProfile(userId, behaviorData);
-
-        // Try Supabase save
         try {
-          const { error: skillError } = await req.supabase
-            .from('behavior_profile')
-            .upsert({
-              user_id: userId,
-              ...behaviorData,
-              updated_at: new Date().toISOString()
-            });
-          if (skillError) console.warn('Supabase behavior_profile upsert failed:', skillError.message);
+          await req.supabase.from('behavior_profile').upsert({ user_id: userId, ...behaviorData, updated_at: new Date().toISOString() });
         } catch (dbErr) {
-          console.warn('Supabase behavior_profile exception:', dbErr.message);
+          console.warn('Supabase legacy skills_game error:', dbErr.message);
         }
         break;
       }
 
       case 'mindset': {
-        fallbackCache.setProfile(userId, { 
-          career_mindset: data.mindset
-        });
-
-        // Try Supabase save
+        fallbackCache.setProfile(userId, { career_mindset: data.mindset });
         try {
-          const { error: mindError } = await req.supabase
-            .from('profiles')
-            .update({ 
-              career_mindset: data.mindset,
-              updated_at: new Date().toISOString()
-            })
-            .eq('id', userId);
-          if (mindError) console.warn('Supabase profiles mindset save failed:', mindError.message);
+          await req.supabase.from('profiles').update({ career_mindset: data.mindset, updated_at: new Date().toISOString() }).eq('id', userId);
         } catch (dbErr) {
-          console.warn('Supabase profiles mindset exception:', dbErr.message);
+          console.warn('Supabase legacy mindset error:', dbErr.message);
         }
         break;
       }
@@ -215,91 +327,345 @@ export const saveProgress = async (req, res) => {
     console.error(`Progress save failure in stage ${stage}:`, err);
     return res.status(200).json({ 
       success: true, 
-      message: `Progress captured in local backup cache for: ${stage}` 
+      message: `Progress saved in memory fallback for stage: ${stage}` 
     });
   }
 };
 
+/**
+ * Perform Career Analysis calculations & generate the comprehensive Dashboard JSON
+ */
 export const calculateRichRecommendations = (profile, behavior) => {
   const stream = profile?.academic_stream || 'Other';
   const favSubjects = profile?.favorite_subjects || [];
-  const logical = behavior?.logical_reasoning_score ?? 1;
-  const creativity = behavior?.creativity_score ?? 1;
-  const analytical = behavior?.analytical_score ?? 1;
-  const curiosity = behavior?.curiosity_score ?? 1;
+  const marks = profile?.marks_range || '75-89';
+  const confidence = profile?.academic_confidence || 3;
+  const lifestyle = profile?.lifestyle_preferences || {};
 
-  const pathwaysList = [
+  // Extract skills from behavior (full all_skills details or defaults)
+  const skills = behavior?.all_skills || {
+    logicalThinking: (behavior?.logical_reasoning_score || 3) * 6,
+    analyticalThinking: (behavior?.analytical_score || 3) * 6,
+    criticalThinking: (behavior?.analytical_score || 3) * 6,
+    creativity: (behavior?.creativity_score || 3) * 6,
+    communication: (behavior?.communication_tendency || 3) * 6,
+    curiosity: (behavior?.curiosity_score || 3) * 6,
+    problemSolving: (behavior?.emotional_confidence_score || 3) * 6,
+    observationSkills: (behavior?.exploration_level || 3) * 6,
+    decisionMaking: (behavior?.analytical_score || 3) * 6,
+    leadership: (behavior?.communication_tendency || 3) * 6,
+    adaptability: (behavior?.retry_behavior_score || 2) * 6,
+    learningBehavior: 18
+  };
+
+  const telemetry = behavior?.tracking_metrics || {
+    confidence_weight: 1.0,
+    precision_weight: 1.0,
+    panic_index: 0.0
+  };
+  const confW = telemetry.confidence_weight || 1.0;
+  const precW = telemetry.precision_weight || 1.0;
+  const panicI = telemetry.panic_index || 0.0;
+
+  const norm = (val) => {
+    const v = val || 15;
+    return ((v - 15) / 15) * 8 + 2;
+  };
+  const getBehavioralBoost = (v1, v2, v3) => {
+    return (norm(v1) + norm(v2) + norm(v3)) * 1.33;
+  };
+
+  // 1. Identify dominant behavioral archetype
+  let dominantProfile = 'Resilient Operations Engine';
+  let traits = ['Adaptable', 'Decisive', 'Stable'];
+  let profileDesc = 'You thrive in unpredictable, high-variable technical environments. With strong adaptability vectors and rapid decisioning under pressure, you are highly suited for Site Reliability Engineering, Solutions Architecture, and scaling complex tech ventures.';
+
+  const pairs = [
+    { name: 'Strategic Systems Architect', val: skills.logicalThinking + skills.problemSolving, traits: ['Logical', 'Structured', 'Problem Solver'], desc: 'You approach challenges with structured precision. Your strong capacity for logical sequence reasoning and algorithm analysis makes you excellent at designing robust, scaled backend architectures, DevOps, cloud infrastructure, and security protocols.' },
+    { name: 'Imaginative Product Innovator', val: skills.creativity + skills.curiosity, traits: ['Creative', 'Curious', 'Lateral Thinker'], desc: 'You see connections where others see walls. Guided by an insatiable curiosity and a natural creative flair, you excel at prototyping novel solutions, designing human-computer interfaces (UI/UX), and steering frontend engineering projects.' },
+    { name: 'Analytical Intelligence Lead', val: skills.analyticalThinking + skills.criticalThinking, traits: ['Analytical', 'Data-Driven', 'Rational'], desc: 'You let data tell the story. Your exceptional analytical reasoning, critical evaluation, and resource allocation decision skills make you highly suited for data science pipelines, ML/DL research, and quantitative logic systems.' },
+    { name: 'Coordinating Product Strategist', val: skills.communication + skills.leadership, traits: ['Empathetic', 'Communicator', 'Leader'], desc: 'You thrive in collective structures. By synthesizing communications, coordinating options prioritization, and taking charge of team decisions, you bridge the gap between technical requirements and organizational success in Technical Product Management and Scrum Orchestration.' },
+    { name: 'Resilient Operations Engine', val: skills.adaptability + skills.problemSolving, traits: ['Adaptable', 'Decisive', 'Stable'], desc: 'You thrive in unpredictable, high-variable technical environments. With strong adaptability vectors, rapid decisioning, and high stability under variable adjustments, you are highly suited for Site Reliability Engineering, Solutions Architecture, and tech ventures.' }
+  ];
+
+  pairs.sort((a, b) => b.val - a.val);
+  dominantProfile = pairs[0].name;
+  traits = pairs[0].traits;
+  profileDesc = pairs[0].desc;
+
+  // 2. Compute Match Scores for Career Paths using the dual-axis telemetry adjustments
+  const pathways = [
     {
       name: 'AI & Intelligent Systems',
-      description: 'Building next-generation smart agents, neural networks, and automation systems.',
-      matchReason: 'Your stream in Computer Science/Science combined with strong Logical Reasoning and Mathematics makes you a perfect fit for deep tech.',
-      baseBoost: stream === 'Computer Science' || stream === 'Science' ? 30 : 10,
-      subjectBoost: favSubjects.includes('Mathematics') || favSubjects.includes('Computer Science') || favSubjects.includes('Physics') ? 30 : 10,
-      behavioralBoost: (logical + analytical) * 15, // max 60
+      description: 'Building next-generation smart agents, neural networks, data modeling, and automation architectures.',
+      baseBoost: (stream === 'Computer Science' || stream === 'Science') ? 30 : 10,
+      subjectBoost: (favSubjects.includes('Mathematics') || favSubjects.includes('Computer Science') || favSubjects.includes('Physics')) ? 30 : 10,
+      behavioralBoost: getBehavioralBoost(skills.logicalThinking, skills.analyticalThinking, skills.problemSolving) * confW * precW,
+      salaryPotential: '₹12 - ₹28 LPA',
+      demand: 'Exponential',
+      competition: 'High',
+      stability: 'Medium-High',
+      futureOpportunities: 'High growth driven by conversational models, automation tools, and agentic computing.',
+      requiredSkills: ['Logical Thinking', 'Analytical Thinking', 'Problem Solving', 'Mathematics'],
+      recommendedCourses: ['Python', 'MySQL', 'Problem Solving'],
+      certifications: ['AWS Certified Machine Learning Specialist', 'TensorFlow Developer Certificate'],
+      projects: ['Build a neural network classifier', 'Implement a secure MySQL data analysis dashboard']
     },
     {
       name: 'Software Engineering',
-      description: 'Creating robust applications, algorithms, systems architecture, and web platforms.',
-      matchReason: 'Strong technical diagnostic performance combined with Mathematics or Computer Science indicates excellent software design capabilities.',
-      baseBoost: stream === 'Computer Science' || stream === 'Science' ? 30 : 15,
-      subjectBoost: favSubjects.includes('Computer Science') || favSubjects.includes('Mathematics') ? 30 : 10,
-      behavioralBoost: (logical + creativity) * 15, // max 60
+      description: 'Creating robust mobile applications, complex backend architectures, web solutions, and software systems.',
+      baseBoost: (stream === 'Computer Science' || stream === 'Science') ? 30 : 15,
+      subjectBoost: (favSubjects.includes('Computer Science') || favSubjects.includes('Mathematics')) ? 30 : 10,
+      behavioralBoost: getBehavioralBoost(skills.logicalThinking, skills.problemSolving, skills.adaptability) * confW * precW,
+      salaryPotential: '₹8 - ₹20 LPA',
+      demand: 'Very High',
+      competition: 'High',
+      stability: 'High',
+      futureOpportunities: 'Continuous expansion in cloud technologies, SaaS platforms, and collaborative development tools.',
+      requiredSkills: ['Logical Thinking', 'Problem Solving', 'Adaptability', 'Computer Science'],
+      recommendedCourses: ['C', 'Java', 'Python'],
+      certifications: ['Oracle Certified Professional Java Developer', 'Google Cloud Associate Cloud Engineer'],
+      projects: ['Build a full-stack task manager', 'Create a local compiler helper in C']
     },
     {
-      name: 'Product Innovation',
-      description: 'Bridging design, strategy, and engineering to build products that solve real customer problems.',
-      matchReason: 'A creative problem-solving mindset and strategic perspective are ideal for leadership and product management.',
-      baseBoost: stream === 'Commerce' || stream === 'Arts' ? 30 : 15,
-      subjectBoost: favSubjects.includes('Business Studies') || favSubjects.includes('Economics') || favSubjects.includes('English') ? 30 : 10,
-      behavioralBoost: (creativity + curiosity) * 15, // max 60
+      name: 'Product & Design Innovation (UI/UX)',
+      description: 'Bridging creative user research with technical logic to define interface systems and beautiful products.',
+      baseBoost: (stream === 'Arts & Humanities' || stream === 'Computer Science') ? 30 : 15,
+      subjectBoost: (favSubjects.includes('English') || favSubjects.includes('Computer Science') || favSubjects.includes('Geography') || favSubjects.includes('History')) ? 25 : 10,
+      behavioralBoost: getBehavioralBoost(skills.creativity, skills.curiosity, skills.communication) * confW * precW,
+      salaryPotential: '₹7 - ₹16 LPA',
+      demand: 'High',
+      competition: 'Medium',
+      stability: 'High',
+      futureOpportunities: 'Growing relevance in VR interfaces, customer psychology mapping, and creative digital agencies.',
+      requiredSkills: ['Creativity', 'Curiosity', 'Communication', 'English'],
+      recommendedCourses: ['Communication Skills', 'Problem Solving'],
+      certifications: ['Google UX Design Professional Certificate', 'Interaction Design Foundation Cert'],
+      projects: ['Design an interactive workspace planner wireframe', 'Conduct user empathy study for elderly users']
     },
     {
-      name: 'Cybersecurity',
-      description: 'Securing digital infrastructures, networks, and protecting systems from malicious intrusions.',
-      matchReason: 'An analytical and structured approach to problem solving matches well with system defense and routing logic.',
-      baseBoost: stream === 'Computer Science' || stream === 'Science' ? 30 : 10,
-      subjectBoost: favSubjects.includes('Computer Science') || favSubjects.includes('Physics') ? 30 : 10,
-      behavioralBoost: (logical + analytical) * 15, // max 60
+      name: 'Data Analytics & FinTech',
+      description: 'Mining big datasets, running quantitative statistical models, and automating business financial systems.',
+      baseBoost: (stream === 'Commerce' || stream === 'Computer Science') ? 30 : 15,
+      subjectBoost: (favSubjects.includes('Mathematics') || favSubjects.includes('Economics') || favSubjects.includes('Accountancy') || favSubjects.includes('Business Studies')) ? 30 : 10,
+      behavioralBoost: getBehavioralBoost(skills.analyticalThinking, skills.decisionMaking, skills.logicalThinking) * confW * precW,
+      salaryPotential: '₹8 - ₹18 LPA',
+      demand: 'Very High',
+      competition: 'Medium-High',
+      stability: 'High',
+      futureOpportunities: 'Essential in digital transactions, cloud analytics, and predictive market models.',
+      requiredSkills: ['Analytical Thinking', 'Logical Thinking', 'Decision Making', 'Mathematics'],
+      recommendedCourses: ['Python', 'MySQL', 'Problem Solving'],
+      certifications: ['Google Data Analytics Professional Certificate', 'Microsoft Certified: Power BI Analyst'],
+      projects: ['Analyze transaction anomaly patterns using Python', 'Build a real-time sales reporting database']
     },
     {
-      name: 'UI/UX + Technology',
-      description: 'Designing user interfaces, human-computer interactions, and frontend styling frameworks.',
-      matchReason: 'A combination of creative design, user-focused empathy, and frontend tech logic.',
-      baseBoost: stream === 'Arts' || stream === 'Computer Science' ? 30 : 15,
-      subjectBoost: favSubjects.includes('English') || favSubjects.includes('Computer Science') || favSubjects.includes('History') ? 30 : 10,
-      behavioralBoost: (creativity + curiosity) * 15, // max 60
-    },
-    {
-      name: 'Data Analytics',
-      description: 'Extracting patterns from vast datasets, statistical modeling, and business intelligence.',
-      matchReason: 'Your solid mathematical grounding and high analytical score align seamlessly with quantitative reasoning and economics.',
-      baseBoost: stream === 'Commerce' || stream === 'Science' ? 30 : 15,
-      subjectBoost: favSubjects.includes('Mathematics') || favSubjects.includes('Economics') || favSubjects.includes('Business Studies') ? 30 : 10,
-      behavioralBoost: (analytical + logical) * 15, // max 60
+      name: 'Biotechnology & Health Informatics',
+      description: 'Developing digital systems for healthcare databases, genomic sequencing, and biological lab systems.',
+      baseBoost: (stream === 'Biology') ? 30 : 10,
+      subjectBoost: (favSubjects.includes('Biology') || favSubjects.includes('Chemistry') || favSubjects.includes('Physics')) ? 30 : 10,
+      behavioralBoost: getBehavioralBoost(skills.curiosity, skills.observationSkills, skills.analyticalThinking) * confW * precW,
+      salaryPotential: '₹6 - ₹15 LPA',
+      demand: 'High',
+      competition: 'Low-Medium',
+      stability: 'Very High',
+      futureOpportunities: 'Pivotal role in automated diagnostic equipment, vaccine research networks, and healthcare app engines.',
+      requiredSkills: ['Curiosity', 'Observation Skills', 'Analytical Thinking', 'Biology'],
+      recommendedCourses: ['Python', 'MySQL', 'Communication Skills'],
+      certifications: ['Certified Health Informatics Professional', 'Bioinformatics Specialization Certificate'],
+      projects: ['Model molecular structures using visualization tools', 'Design database to catalog clinical outcomes']
     }
   ];
 
-  return pathwaysList.map(p => {
-    const rawScore = p.baseBoost + p.subjectBoost + p.behavioralBoost;
-    const matchScore = Math.min(100, Math.max(50, rawScore));
+  // Map and sort recommendations
+  const scoredPathways = pathways.map(p => {
+    const rawScore = Math.round(p.baseBoost + p.subjectBoost + p.behavioralBoost);
+    const matchScore = Math.min(98, Math.max(55, rawScore));
     return {
-      name: p.name,
-      description: p.description,
-      matchReason: p.matchReason,
+      ...p,
       matchScore
     };
   }).sort((a, b) => b.matchScore - a.matchScore);
+
+  const primaryRecommendations = scoredPathways.slice(0, 3);
+  const backupRecommendations = scoredPathways.slice(3, 5);
+
+  // 3. College Recommendations
+  const isTechStream = stream === 'Computer Science' || stream === 'Science';
+  const isCommerceStream = stream === 'Commerce';
+  const isBiologyStream = stream === 'Biology';
+
+  let collegeData = {
+    dream: [
+      { name: 'IIT Madras (Indian Institute of Technology)', location: 'Chennai', desc: 'Renowned globally for research publications, compute servers, and B.Tech algorithms.' },
+      { name: 'BITS Pilani (Birla Institute)', location: 'Rajasthan', desc: 'Supreme private institution highlighting high startup placements and flexible degree paths.' }
+    ],
+    realistic: [
+      { name: 'VIT University (Vellore Institute)', location: 'Vellore', desc: 'Vast campus offering exceptional multi-language programming streams and global tie-ups.' },
+      { name: 'CEG, Anna University', location: 'Chennai', desc: 'Historic state institution with extremely competitive cutoff lists for CS and engineering.' }
+    ],
+    safe: [
+      { name: 'SRM Institute of Science & Tech', location: 'Chennai', desc: 'Flexible credit system, large modern hackathon infrastructure, and broad placement drives.' },
+      { name: 'Amrita School of Engineering', location: 'Coimbatore', desc: 'Strong focus on core engineering fundamentals and values.' }
+    ]
+  };
+
+  if (isCommerceStream) {
+    collegeData = {
+      dream: [
+        { name: 'SRCC (Shri Ram College of Commerce)', location: 'Delhi', desc: 'Premium Indian college for finance, economics, business analytics, and commerce.' },
+        { name: 'Loyola College (Autonomous)', location: 'Chennai', desc: 'Highly esteemed arts and commerce center with excellent corporate internship placements.' }
+      ],
+      realistic: [
+        { name: 'Christ University (Deemed)', location: 'Bengaluru', desc: 'Modern practical curriculum highlighting business cases and presentation skills.' },
+        { name: 'Symbiosis College of Arts & Commerce', location: 'Pune', desc: 'Excellent industrial commerce pathways and collaborative internship options.' }
+      ],
+      safe: [
+        { name: 'MCC (Madras Christian College)', location: 'Chennai', desc: 'Iconic lush campus with top-tier history in business administration and economics.' },
+        { name: 'SRM School of Management', location: 'Chennai', desc: 'Solid starting corporate tracks and modern digital marketing facilities.' }
+      ]
+    };
+  } else if (isBiologyStream) {
+    collegeData = {
+      dream: [
+        { name: 'AIIMS (All India Institute of Medical Sciences)', location: 'Delhi', desc: 'Elite research institution leading in bioinformatics and diagnostic practices.' },
+        { name: 'CMC Vellore (Christian Medical College)', location: 'Vellore', desc: 'Outstanding clinical focus and data research operations.' }
+      ],
+      realistic: [
+        { name: 'JIPMER', location: 'Puducherry', desc: 'Excellent infrastructure for biological research and clinical data systems.' },
+        { name: 'PSG College of Technology (Biotech)', location: 'Coimbatore', desc: 'Well-equipped labs for industrial biochemistry and health analytics.' }
+      ],
+      safe: [
+        { name: 'Amrita School of Biotechnology', location: 'Kollam', desc: 'Excellent training in sequencing algorithms and bio-lab processes.' },
+        { name: 'Sathyabama University', location: 'Chennai', desc: 'Convenient admission paths with dedicated departments in biotechnology.' }
+      ]
+    };
+  }
+
+  // Study location preferences influence
+  const locationPref = lifestyle.study_location || 'Elsewhere in India';
+  if (lifestyle.work_abroad || locationPref === 'Abroad') {
+    collegeData.dream.unshift({
+      name: 'National University of Singapore (NUS)',
+      location: 'Singapore',
+      desc: 'Top global university for Computer Science, AI, and systems engineering.'
+    });
+    collegeData.dream = collegeData.dream.slice(0, 2);
+  }
+
+  // 4. Learning Ecosystem Recommendations
+  const primaryPath = primaryRecommendations[0];
+  const targetCourses = primaryPath.recommendedCourses || ['Python', 'MySQL', 'Problem Solving'];
+  
+  // Skill gaps analyzer (compare target career skills with validated strengths)
+  const reqSkills = primaryPath.requiredSkills || ['Logical Thinking', 'Analytical Thinking'];
+  
+  // Validated strengths are skills >= 22 (representing baseline 15 + high confidence threshold)
+  const validatedStrengths = [];
+  if (skills.logicalThinking >= 22) validatedStrengths.push('Logical Thinking');
+  if (skills.analyticalThinking >= 22) validatedStrengths.push('Analytical Thinking');
+  if (skills.criticalThinking >= 22) validatedStrengths.push('Critical Thinking');
+  if (skills.creativity >= 22) validatedStrengths.push('Creativity');
+  if (skills.communication >= 22) validatedStrengths.push('Communication');
+  if (skills.curiosity >= 22) validatedStrengths.push('Curiosity');
+  if (skills.problemSolving >= 22) validatedStrengths.push('Problem Solving');
+  if (skills.observationSkills >= 22) validatedStrengths.push('Observation Skills');
+
+  const missingSkills = reqSkills.filter(s => !validatedStrengths.includes(s));
+
+  return {
+    identitySnapshot: {
+      profileName: dominantProfile,
+      description: profileDesc,
+      traits: traits
+    },
+    academicInsights: {
+      strongestSubjects: favSubjects.slice(0, 3),
+      alignmentFeedback: `Your selection of ${favSubjects.join(', ')} aligns extremely well with your current stream ${stream}. This academic baseline establishes a solid platform for professional careers.`,
+      streamInfo: `Stream: ${stream} | Potential Performance: ${marks}`
+    },
+    skillAnalytics: {
+      logicalThinking: norm(skills.logicalThinking) * 10,
+      analyticalThinking: norm(skills.analyticalThinking) * 10,
+      criticalThinking: norm(skills.criticalThinking) * 10,
+      creativity: norm(skills.creativity) * 10,
+      communication: norm(skills.communication) * 10,
+      curiosity: norm(skills.curiosity) * 10,
+      problemSolving: norm(skills.problemSolving) * 10,
+      observationSkills: norm(skills.observationSkills) * 10,
+      decisionMaking: norm(skills.decisionMaking) * 10,
+      leadership: norm(skills.leadership) * 10,
+      adaptability: norm(skills.adaptability) * 10
+    },
+    recommendedPathways: primaryRecommendations.map(p => ({
+      name: p.name,
+      description: p.description,
+      matchScore: p.matchScore,
+      matchReason: p.matchReason || `Your strong combination of ${p.requiredSkills.slice(0, 2).join(' and ')} combined with your stream ${stream} fuels this direction.`,
+      salaryPotential: p.salaryPotential,
+      demand: p.demand,
+      competition: p.competition,
+      stability: p.stability,
+      futureOpportunities: p.futureOpportunities
+    })),
+    backupPathways: backupRecommendations.map(p => ({
+      name: p.name,
+      description: p.description,
+      matchScore: p.matchScore,
+      matchReason: `Aligns with your secondary interests in ${p.requiredSkills.slice(0, 2).join(' & ')}.`
+    })),
+    learningRecommendations: {
+      courses: targetCourses,
+      certifications: primaryPath.certifications,
+      projects: primaryPath.projects,
+      priorities: missingSkills.length > 0 
+        ? missingSkills.map(s => `Neutralize gap in ${s} through foundational modules`)
+        : ['Explore advanced research concepts', 'Begin building high-scale portfolio projects']
+    },
+    higherEducation: {
+      recommendation: lifestyle.higher_education 
+        ? `Pursue a specialized Master\'s Degree or Advanced Postgraduate Certificate in ${primaryPath.name}.`
+        : `Focus on immediate Career Readiness and Professional Certificates directly after graduation.`,
+      locationPreference: locationPref,
+      suggestedDegrees: isTechStream 
+        ? ['B.Tech Computer Science', 'B.Sc Data Science & AI', 'M.Sc Systems Computing']
+        : isCommerceStream 
+          ? ['B.Com Honours', 'BBA Finance & FinTech', 'MBA Product Management']
+          : ['B.Sc Biotechnology', 'B.Sc Health Informatics', 'M.Sc Bioinformatics']
+    },
+    colleges: collegeData,
+    careerRoadmap: {
+      foundations: `Establish strong grasp on ${favSubjects.slice(0, 2).join(' and ')} and begin practicing core programming logic or analytics.`,
+      skillDevelopment: `Enroll in CurveUrCareer's target courses (${targetCourses.join(', ')}) to systematically resolve foundational skill gaps.`,
+      projects: `Build portfolio projects such as: "${primaryPath.projects[0]}". Host them on a public repository.`,
+      internships: `Secure early summer internship placements or coordinate startup project roles to gain practical experience.`,
+      advancedLearning: `Complete advanced certifications such as: "${primaryPath.certifications[0]}" to stand out.`,
+      careerReadiness: `Refine your resume, practice placement coding tests, record mock interviews, and apply for roles.`
+    },
+    skillGapAnalyzer: {
+      requiredSkills: reqSkills,
+      validatedStrengths: reqSkills.filter(s => validatedStrengths.includes(s)),
+      missingSkills: missingSkills
+    },
+    aptitudeFoundation: skills,
+    executionProfile: {
+      confidenceWeight: confW,
+      precisionWeight: precW,
+      panicIndex: panicI,
+      styleDescription: dominantProfile === 'Strategic Systems Architect' ? 'Low Hesitation / Elevated Precision' :
+                        dominantProfile === 'Imaginative Product Innovator' ? 'High Option Traversal & Exploration' :
+                        dominantProfile === 'Analytical Intelligence Lead' ? 'High Context Read Times / Continuous Highlighting' :
+                        dominantProfile === 'Coordinating Product Strategist' ? 'Collaborative Option Prioritization' :
+                        'High Stability under Variable Adjustments'
+    }
+  };
 };
 
-/**
- * Finalize onboarding, evaluate weighted analytics, and save complete profile
- * POST /api/discover/complete
- */
 export const completeDiscovery = async (req, res) => {
   const userId = req.user.id;
 
   try {
-    // 1. Retrieve educational identity from profile
+    // 1. Retrieve profile and behavior documents from database
     let profile = null;
     try {
       const { data: dbProfile } = await req.supabase
@@ -309,45 +675,28 @@ export const completeDiscovery = async (req, res) => {
         .maybeSingle();
       profile = dbProfile;
     } catch (e) {
-      console.warn('Supabase profiles read failed in completeDiscovery:', e.message);
+      console.warn('Supabase profiles read failed, falling back to cache:', e.message);
     }
 
-    // Fall back to cache
     const cachedProfile = fallbackCache.getProfile(userId);
     profile = profile || cachedProfile;
 
     if (!profile) {
-      console.log(`💡 Profile completely missing. Auto-creating fallback in cache...`);
       const defaultUsername = req.user.user_metadata?.username || req.user.email?.split('@')[0] || 'Explorer';
       profile = fallbackCache.setProfile(userId, {
         id: userId,
         email: req.user.email,
         username: defaultUsername,
         name: defaultUsername,
-        education_stage: 'college',
-        onboarding_completed: false,
-        career_mindset: 'forest'
+        education_stage: 'College 1st Year',
+        academic_stream: 'Computer Science',
+        favorite_subjects: ['Mathematics', 'Computer Science'],
+        marks_range: '90-100',
+        academic_confidence: 4,
+        onboarding_completed: false
       });
     }
 
-    // 2. Retrieve interests data
-    let interests = [];
-    try {
-      const { data: dbInterests } = await req.supabase
-        .from('user_interests')
-        .select('interest, interaction_strength')
-        .eq('user_id', userId);
-      interests = dbInterests || [];
-    } catch (e) {
-      console.warn('Supabase interests read failed in completeDiscovery:', e.message);
-    }
-
-    // Fall back to cached interests
-    if (interests.length === 0) {
-      interests = fallbackCache.getInterests(userId);
-    }
-
-    // 3. Retrieve skills diagnostics from behavior profile
     let behavior = null;
     try {
       const { data: dbBehavior } = await req.supabase
@@ -357,157 +706,58 @@ export const completeDiscovery = async (req, res) => {
         .maybeSingle();
       behavior = dbBehavior;
     } catch (e) {
-      console.warn('Supabase behavior_profile read failed in completeDiscovery:', e.message);
+      console.warn('Supabase behavior read failed, falling back to cache:', e.message);
     }
 
-    // Fall back to cached behavior
-    behavior = behavior || fallbackCache.getBehaviorProfile(userId);
+    const cachedBehavior = fallbackCache.getBehaviorProfile(userId);
+    behavior = behavior || cachedBehavior;
 
-    // 4. Synthesize final strengths, pathways, and identify beginner skill gaps
-    const topStrengths = [];
-    const skillGaps = [];
-    const detectedPatterns = [];
+    // 2. Perform Career Intelligence calculations
+    const dashboardData = calculateRichRecommendations(profile, behavior);
 
-    // Analyze skills and record strengths/gaps
-    if (behavior) {
-      // Logical Reasoning Check
-      if (behavior.logical_reasoning_score >= 2) {
-        topStrengths.push('Logical Reasoning');
-      } else {
-        skillGaps.push('Logical Reasoning');
-      }
-
-      // Analytical Thinking Check
-      if (behavior.analytical_score >= 2) {
-        topStrengths.push('Analytical Thinking');
-      } else {
-        skillGaps.push('Analytical Thinking');
-      }
-
-      // Creative Problem Solving Check (maps to technical score/creativity in puzzles)
-      if (behavior.creativity_score >= 2) {
-        topStrengths.push('Creative Problem Solving');
-      } else {
-        skillGaps.push('Creative Problem Solving');
-      }
-
-      // Dynamic Explorer Patterns
-      if (behavior.logical_reasoning_score >= 2 && behavior.analytical_score >= 2) {
-        detectedPatterns.push('Pattern Solver');
-      }
-      if (behavior.creativity_score >= 2) {
-        detectedPatterns.push('Imaginative Creator');
-      }
-
-      // Curiosity / Exploration
-      if (behavior.curiosity_score >= 2 || behavior.exploration_level >= 2) {
-        topStrengths.push('Active Curiosity Explorer');
-        detectedPatterns.push('Deep Observer');
-      }
-
-      // Adaptability / Retry Persistence
-      if (behavior.retry_behavior_score > 2) {
-        topStrengths.push('Resilience & High Persistence');
-      }
-    } else {
-      // Fallback gaps if profile missing
-      skillGaps.push('Logical Reasoning', 'Analytical Thinking', 'Creative Problem Solving');
-    }
-
-    // Compute rich pathway recommendation matrix using academic stream, favorite subjects, and behavioral scores
-    const richPathways = calculateRichRecommendations(profile, behavior);
-    const recommendedPathways = richPathways.map(p => p.name);
-
-    // Default summaries based on career mindset scenery
-    let summaryText = 'You are a foundational builder starting an immersive career journey.';
-    if (profile.career_mindset === 'forest') {
-      summaryText = 'You approach your future as an unexplored forest—filled with curiosity, actively seeking to map out new ideas and discover paths that match your diverse skills.';
-    } else if (profile.career_mindset === 'galaxy') {
-      summaryText = 'You envision your career as an open galaxy—brimming with boundless creative ideas and seeking futuristic systems where your imagination can scale.';
-    } else if (profile.career_mindset === 'highway') {
-      summaryText = 'You view your pathway as a structured highway—focused on building a clear, robust roadmap with stable milestones and actionable skills.';
-    } else if (profile.career_mindset === 'maze') {
-      summaryText = 'You approach your development as a glowing maze—highly analytical, observing structural elements, and finding the most optimized and tactical solutions.';
-    }
-
-    // Compile dynamic exploration pattern label
-    let finalExplorationType = 'Active Explorer';
-    if (behavior) {
-      if (behavior.curiosity_score > behavior.analytical_score) {
-        finalExplorationType = 'Curiosity-Driven Experimenter';
-      } else {
-        finalExplorationType = 'Structured Logical Observer';
-      }
-    }
-
-    const confidenceLevel = behavior?.emotional_confidence_score > 1 ? 'High Confidence' : 'Foundational Explorer';
-    const learningBehavior = behavior?.learning_style_pattern || 'Adaptive Learner';
-
-    // 5. Save results to cache profile first
-    fallbackCache.setProfile(userId, {
+    // Save final completion parameters back to profile
+    const profileUpdates = {
       onboarding_completed: true,
-      exploration_type: finalExplorationType,
-      confidence_level: confidenceLevel,
-      learning_behavior: learningBehavior
-    });
-
-    const finalResultsObject = {
-      top_strengths: topStrengths,
-      detected_patterns: detectedPatterns,
-      recommended_pathways: recommendedPathways,
-      skill_gaps: skillGaps,
-      personalized_summary: summaryText,
+      exploration_type: dashboardData.identitySnapshot.profileName,
+      confidence_level: profile.academic_confidence >= 4 ? 'High Confidence' : 'Foundational Explorer',
+      learning_behavior: behavior?.learning_style_pattern || 'Adaptive Learner',
+      updated_at: new Date().toISOString()
     };
 
-    fallbackCache.setDiscoverResults(userId, finalResultsObject);
+    fallbackCache.setProfile(userId, profileUpdates);
+    fallbackCache.setDiscoverResults(userId, { dashboard_data: dashboardData });
 
-    // 6. Try to write completion state back to Supabase
+    // 3. Write to Supabase database
     try {
-      const { error: profileFinalError } = await req.supabase
+      await req.supabase
         .from('profiles')
-        .update({
-          onboarding_completed: true,
-          exploration_type: finalExplorationType,
-          confidence_level: confidenceLevel,
-          learning_behavior: learningBehavior,
-          updated_at: new Date().toISOString()
-        })
+        .update(profileUpdates)
         .eq('id', userId);
-
-      if (profileFinalError) console.warn('Supabase profiles complete update failed:', profileFinalError.message);
     } catch (e) {
-      console.warn('Supabase profiles complete update exception:', e.message);
+      console.warn('Supabase complete profiles update skipped:', e.message);
     }
 
     try {
-      const { error: resError } = await req.supabase
+      await req.supabase
         .from('discover_yourself_results')
         .upsert({
           user_id: userId,
-          top_strengths: topStrengths,
-          detected_patterns: detectedPatterns,
-          recommended_pathways: recommendedPathways,
-          skill_gaps: skillGaps,
-          personalized_summary: summaryText,
+          top_strengths: dashboardData.skillGapAnalyzer.validatedStrengths,
+          detected_patterns: dashboardData.identitySnapshot.traits,
+          recommended_pathways: dashboardData.recommendedPathways.map(p => p.name),
+          skill_gaps: dashboardData.skillGapAnalyzer.missingSkills,
+          personalized_summary: dashboardData.identitySnapshot.description,
+          dashboard_data: dashboardData,
           completion_timestamp: new Date().toISOString()
         });
-
-      if (resError) console.warn('Supabase discover_yourself_results upsert failed:', resError.message);
     } catch (e) {
-      console.warn('Supabase discover_yourself_results upsert exception:', e.message);
+      console.warn('Supabase complete discover results upsert skipped:', e.message);
     }
 
     return res.status(200).json({
       success: true,
-      message: 'Self-discovery completed successfully!',
-      results: {
-        topStrengths,
-        detectedPatterns,
-        recommendedPathways: richPathways, // return rich detailed array!
-        skillGaps,
-        personalizedSummary: summaryText,
-        explorationType: finalExplorationType
-      }
+      message: 'Self-discovery synthesis completed successfully!',
+      results: dashboardData
     });
 
   } catch (err) {
@@ -516,30 +766,43 @@ export const completeDiscovery = async (req, res) => {
   }
 };
 
-/**
- * Fetch results of completed self-discovery
- * GET /api/discover/results
- */
 export const getDiscoveryResults = async (req, res) => {
   const userId = req.user.id;
 
   try {
-    let results = null;
+    let dbResults = null;
     try {
       const { data, error } = await req.supabase
         .from('discover_yourself_results')
         .select('*')
         .eq('user_id', userId)
         .maybeSingle();
-      if (!error && data) results = data;
+      if (!error && data) dbResults = data;
     } catch (e) {
-      console.warn('Supabase results read failed:', e.message);
+      console.warn('Supabase results read error:', e.message);
     }
 
-    // Fall back to cache results
-    results = results || fallbackCache.getDiscoverResults(userId);
+    const cachedResults = fallbackCache.getDiscoverResults(userId);
+    const results = dbResults || cachedResults;
 
-    if (!results) {
+    if (!results || !results.dashboard_data) {
+      // If we have profile data, we can dynamically run completeDiscovery on the fly!
+      let profile = fallbackCache.getProfile(userId);
+      let behavior = fallbackCache.getBehaviorProfile(userId);
+
+      if (profile && behavior) {
+        console.log('Results missing, performing on-the-fly dashboard calculation');
+        const dashboardData = calculateRichRecommendations(profile, behavior);
+        return res.status(200).json({
+          success: true,
+          results: {
+            dashboard_data: dashboardData,
+            profile,
+            behavior
+          }
+        });
+      }
+
       return res.status(404).json({ 
         success: false, 
         error: 'Self-discovery results not found or onboarding is incomplete' 
@@ -548,39 +811,22 @@ export const getDiscoveryResults = async (req, res) => {
 
     let profile = null;
     try {
-      const { data, error } = await req.supabase
+      const { data } = await req.supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
         .maybeSingle();
-      if (!error && data) profile = data;
+      profile = data;
     } catch (e) {
-      console.warn('Supabase profiles read failed in results page:', e.message);
+      console.warn('Supabase profile read error:', e.message);
     }
     profile = profile || fallbackCache.getProfile(userId);
-
-    let behavior = null;
-    try {
-      const { data: dbBehavior } = await req.supabase
-        .from('behavior_profile')
-        .select('*')
-        .eq('user_id', userId)
-        .maybeSingle();
-      if (dbBehavior) behavior = dbBehavior;
-    } catch (e) {
-      console.warn('Supabase behavior_profile read failed in results page:', e.message);
-    }
-    behavior = behavior || fallbackCache.getBehaviorProfile(userId);
-
-    const richPathways = calculateRichRecommendations(profile, behavior);
 
     return res.status(200).json({
       success: true,
       results: {
         ...results,
-        recommended_pathways: richPathways, // return rich detailed array!
-        profile,
-        behavior
+        profile
       }
     });
 
