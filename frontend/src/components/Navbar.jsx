@@ -17,6 +17,9 @@ const Navbar = () => {
 
   const handleLogout = async () => {
     try {
+      // Clear Phase 3 learning progress so a different user starts fresh
+      localStorage.removeItem('curveurcareer_learning_v3');
+      localStorage.removeItem('curveurcareer_course_progress');
       await logout();
       navigate('/');
     } catch (error) {

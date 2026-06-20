@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Linkedin, Mail, Sparkles, Trophy, Flame, Target, BookOpen, Compass, Shield, CheckCircle2, AlertTriangle, Play, ChevronRight, Zap, Lock } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { coursesData } from '../data/coursesData';
+import useLearning from '../hooks/useLearning';
 
 // Animated Particle Background
 const FloatingParticles = () => {
@@ -155,19 +156,7 @@ const HomePage = () => {
   const [onboardingData, setOnboardingData] = useState(null);
   const [loadingOnboarding, setLoadingOnboarding] = useState(false);
 
-  // --- Course Progress Tracking State ---
-  const [courseProgress, setCourseProgress] = useState({});
-
-  useEffect(() => {
-    const saved = localStorage.getItem('curveurcareer_course_progress');
-    if (saved) {
-      try {
-        setCourseProgress(JSON.parse(saved));
-      } catch (e) {
-        console.error("Failed to parse course progress", e);
-      }
-    }
-  }, []);
+  const { getCourseProgress } = useLearning();
 
   // --- States for Interactive Widgets ---
   
@@ -461,14 +450,16 @@ const HomePage = () => {
       java: 'from-purple-600 to-pink-600',
       mysql: 'from-green-600 to-emerald-600'
     };
-    const progressObj = courseProgress[course.id] || { started: false, progress: 0 };
+    const progressInfo = getCourseProgress(course.id);
+    const progressVal = progressInfo ? progressInfo.progress : 0;
+    const isStarted = progressInfo ? true : false;
     return {
       id: course.id,
       title: course.name,
       level: 'Ecosystem Core Course',
       desc: course.description,
-      progress: progressObj.progress || 0,
-      started: progressObj.started,
+      progress: progressVal,
+      started: isStarted,
       gradient: gradients[course.id] || 'from-slate-600 to-slate-800',
       difficulty: 'Core Coding'
     };
@@ -634,21 +625,23 @@ const HomePage = () => {
                     <p className="text-slate-400 text-xs mb-4 leading-relaxed line-clamp-3">{course.desc}</p>
 
                     {/* Progress representation */}
-                    <div className="mb-6">
-                      <div className="flex justify-between text-xs text-slate-400 mb-1.5">
-                        <span>Foundation progress</span>
-                        <span className="font-bold text-white">{course.progress}%</span>
+                    {user && course.progress > 0 && (
+                      <div className="mb-6">
+                        <div className="flex justify-between text-xs text-slate-400 mb-1.5">
+                          <span>Foundation progress</span>
+                          <span className="font-bold text-white">{course.progress}%</span>
+                        </div>
+                        <div className="h-2 bg-white/5 rounded-full overflow-hidden">
+                          <motion.div
+                            initial={{ width: 0 }}
+                            whileInView={{ width: `${course.progress}%` }}
+                            transition={{ duration: 1.2, delay: idx * 0.1 }}
+                            viewport={{ once: true }}
+                            className="h-full bg-gradient-to-r from-cyan-400 to-blue-500 rounded-full"
+                          />
+                        </div>
                       </div>
-                      <div className="h-2 bg-white/5 rounded-full overflow-hidden">
-                        <motion.div
-                          initial={{ width: 0 }}
-                          whileInView={{ width: `${course.progress}%` }}
-                          transition={{ duration: 1.2, delay: idx * 0.1 }}
-                          viewport={{ once: true }}
-                          className="h-full bg-gradient-to-r from-cyan-400 to-blue-500 rounded-full"
-                        />
-                      </div>
-                    </div>
+                    )}
 
                     
 
